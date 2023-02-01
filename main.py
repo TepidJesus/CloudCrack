@@ -2,12 +2,13 @@ import boto3;
 
 SETUP_COMPLETED = False
 
-# Create a boto3 client to interact with AWS services that accepts the AWS credentials as parameters
-def create_client(service_name, aws_access_key_id, aws_secret_access_key):
+
+def create_client(service_name, aws_access_key_id, aws_secret_access_key, dry_run=False):
     return boto3.client(
         service_name,
         aws_access_key_id=aws_access_key_id,
         aws_secret_access_key=aws_secret_access_key,
+        dry_run=dry_run
     )
 
 
@@ -21,5 +22,12 @@ if (not SETUP_COMPLETED): # Placeholder for now, need to add detection for prese
     aws_secret_access_key = input("Enter your AWS Secret Access Key: ")
     print("Please wait while I validate your credentials...")
     
-    client = create_client("iam", aws_access_key_id, aws_secret_access_key)
+    client = create_client("ec2", aws_access_key_id, aws_secret_access_key, True)
+    try:
+        client.list_users()
+        print("Success! Your credentials are valid.")
+        SETUP_COMPLETED = True
+    except:
+        print("Error: Your credentials are invalid. Please try again.")
+        exit()
 
