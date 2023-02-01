@@ -6,3 +6,6 @@ The hash is first entered into the cracker which then creates a p4.large AWS ins
 is the cracked in the clound using hashcat on a pre-configured AMI.
 
 For educational purposes ONLY.
+
+
+## Setup Instructions will be added when EZ Cracker is operational.
