@@ -31,3 +31,6 @@ if (not SETUP_COMPLETED): # Placeholder for now, need to add detection for prese
         print("Error: Your credentials are invalid. Please try again.")
         exit()
 
+else:
+
+    sqs_client = boto3.client('sqs')
