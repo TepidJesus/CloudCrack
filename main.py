@@ -1,4 +1,6 @@
 import boto3;
+import os
+import dotenv
 
 SETUP_COMPLETED = False
 
@@ -32,5 +34,26 @@ if (not SETUP_COMPLETED): # Placeholder for now, need to add detection for prese
         exit()
 
 else:
+    try:
+        dotenv.load_dotenv()
+        aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+        aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+    except:
+        print("Error: Your credentials are invalid. Please make sure the credentials in your .env file are correct.")
+        exit()
 
-    sqs_client = boto3.client('sqs')
+    print("Looks like you've already set up your AWS credentials. Let's get started!")
+    _hash = input("Enter the hash you want to crack: ")
+    print("Please wait while I crack your hash...")
+
+    queue = create_client("sqs", aws_access_key_id, aws_secret_access_key)
+
+    # Create an SQS queue to send this hash to an EC2 instance
+    # Create an EC2 instance to crack the hash
+    # Wait for the EC2 instance to crack the hash
+    # Print the cracked hash
+
+
+
+
+
