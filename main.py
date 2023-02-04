@@ -3,15 +3,9 @@ import os
 import dotenv
 
 SETUP_COMPLETED = False
+TEST_AMI_ID = "ami-0ab0629dba5ae551d"
 
 
-def create_client(service_name, aws_access_key_id, aws_secret_access_key, dry_run=False):
-    return boto3.client(
-        service_name,
-        aws_access_key_id=aws_access_key_id,
-        aws_secret_access_key=aws_secret_access_key,
-        dry_run=dry_run
-    )
 
 
 
@@ -24,7 +18,7 @@ if (not SETUP_COMPLETED): # Placeholder for now, need to add detection for prese
     aws_secret_access_key = input("Enter your AWS Secret Access Key: ")
     print("Please wait while I validate your credentials...")
     
-    client = create_client("ec2", aws_access_key_id, aws_secret_access_key, True)
+    client = boto3.client('ec2', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name='us-east-2', dry_run=True)
     try:
         client.list_users()
         print("Success! Your credentials are valid.")
@@ -45,8 +39,15 @@ else:
     print("Looks like you've already set up your AWS credentials. Let's get started!")
     _hash = input("Enter the hash you want to crack: ")
     print("Please wait while I crack your hash...")
-
-    queue = create_client("sqs", aws_access_key_id, aws_secret_access_key)
+    sqs = boto3.resource('sqs')
+    queue = sqs.create_queue(QueueName='hash_queue', Attributes={'DelaySeconds': '5'})
+    print(queue.url)
+    queue.delete()
+    
+    # try:
+    # except:    
+    #     print("Error: There was an error creating the SQS queue. Please try again.")
+    #     raise SystemExit
 
     # Create an SQS queue to send this hash to an EC2 instance
     # Create an EC2 instance to crack the hash
