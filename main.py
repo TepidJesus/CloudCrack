@@ -3,7 +3,7 @@ import os
 import dotenv
 
 SETUP_COMPLETED = False
-TEST_AMI_ID = "ami-0ab0629dba5ae551d"
+TEST_AMI_ID = "ami-05bfbece1ed5beb54"
 
 
 
@@ -17,14 +17,15 @@ if (not SETUP_COMPLETED): # Placeholder for now, need to add detection for prese
     aws_access_key_id = input("Enter your AWS Access Key ID: ")
     aws_secret_access_key = input("Enter your AWS Secret Access Key: ")
     print("Please wait while I validate your credentials...")
-    
-    client = boto3.client('ec2', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name='us-east-2', dry_run=True)
+
     try:
-        client.list_users()
-        print("Success! Your credentials are valid.")
+        client = boto3.client('ec2', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name='us-east-2')
+        client.run_instances(ImageId=TEST_AMI_ID, MinCount=1, MaxCount=1, InstanceType='t2.micro', DryRun=True)
+    except DryRunOperation:
         SETUP_COMPLETED = True
+        print("Success! Your credentials are valid.")
     except:
-        print("Error: Your credentials are invalid. Please try again.")
+        print("Error: Your credentials are invalid. Please make sure you entered them correctly.")
         exit()
 
 else:
