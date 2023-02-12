@@ -21,29 +21,35 @@ def set_credentials(aws_access_key_id, aws_secret_access_key):
         f.write("\nAWS_SECRET_ACCESS_KEY=" + aws_secret_access_key)
 
 argv = sys.argv[1:]
-opts, args = getopt.getopt(argv, "hiIt:w", ["help", "inputHash", "inputFile", "hashType", "wordlist"])
+opts, args = getopt.getopt(argv, "hiIt:wo", ["help", "inputHash", "hashFile", "hashType", "wordlist", "outputFile"])
 
 for opt, arg in opts:
     if opt in ("-h", "--help"):
-        print("main.py -i <inputHash> -I <inputFile> -t <hashType>, -w <wordlist>\n")
-        print("-h Show This Menue\n")
-        print("-i <inputHash> Enter single a hash to crack\n")
-        print("-I <inputFile> Enter a file with hashes to crack\n   e.g /home/user/Desktop/hashes.txt\n")
-        print("-t <hashType> Enter the type of hash to crack\n")
-        print("-w <wordlist> Enter the name of a wordlist from the Seclists repository to use (e.g rockyou.txt)")
+        print("Example: main.py -i <inputHash> -I <inputFile> -t <hashType>, -w <wordlist>\n")
+        print("Options:")
+        print("     -h, --help                        Show This Menue")
+        print("     -i, --inputHash      <inputHash>  The hash to be cracked")
+        print("     -I, --hashFile       <inputFile>  The loaction of a txt file with a list of hashes to crack  (e.g /home/user/Desktop/hashes.txt)")
+        print("     -t, --hashType       <hashType>   The type of hash to be cracked (e.g md5, sha1, sha256, sha512)")
+        print("     -w, --wordlist       <wordlist>   The name of a wordlist from the Seclists repository (e.g rockyou.txt). The repository can be found at https://github.com/danielmiessler/SecLists/tree/master/Passwords")
+        print("     -o, --outputFile     <outputFile> The location of the output file (e.g /home/user/Desktop/output.txt). Will output to the console if not specified.")
         sys.exit()
     elif opt in ("-i", "--inputHash"):
-        print("Input Hash")
+        print("Input Hash is: " + arg)
         user_hash = arg
-    elif opt in ("-I", "--inputFile"):
-        print("Input File")
+    elif opt in ("-I", "--hashFile"):
+        print("Input File is: " + arg)
         hash_file = arg
     elif opt in ("-t", "--hashType"):
         hash_type = arg
-        print("Hash Type")
+        print("Hash Type is: " + arg)
     elif opt in ("-w", "--wordlist"):
         wordlist = arg
-        print("Wordlist")
+        print("Wordlist is: " + arg + "")
+    elif opt in ("-o", "--outputFile"):
+        output_file = arg
+        print("Output File is: " + arg + "")
+        sys.exit()
 
 
 print("Welcome to EZ Cracker!")
