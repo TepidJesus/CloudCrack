@@ -23,23 +23,25 @@ def set_credentials(aws_access_key_id, aws_secret_access_key):
 def run_setup():
     print("Welcome to the EZ Cracker setup wizard!")
     print("Lets get started by setting up your AWS credentials. You can find these instructions for this in the setup guide in the README.md file.")
-    aws_access_key_id = input("Enter your AWS Access Key ID: ")
-    aws_secret_access_key = input("Enter your AWS Secret Access Key: ")
-    print("Please wait while I validate your credentials...")
 
-    try:
-        client = boto3.client('ec2', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name='us-east-2')
-        client.run_instances(ImageId=TEST_AMI_ID, MinCount=1, MaxCount=1, InstanceType='t2.micro', DryRun=True)
-    except ClientError as e:
-        if 'DryRunOperation' not in str(e):
-            print("Error: Your credentials are invalid. Please make sure you entered them correctly.")
-            raise e
-        else:
-            print("Success! Your credentials are valid.")
-            set_credentials(aws_access_key_id, aws_secret_access_key)
-    except:
-        print("Sorry, there was an error validating your credentials. Please try again.")
-        exit()
+    while True:
+        aws_access_key_id = input("Enter your AWS Access Key ID: ")
+        aws_secret_access_key = input("Enter your AWS Secret Access Key: ")
+        print("Please wait while I validate your credentials...")
+
+        try:
+            client = boto3.client('ec2', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name='us-east-2')
+            client.run_instances(ImageId=TEST_AMI_ID, MinCount=1, MaxCount=1, InstanceType='t2.micro', DryRun=True)
+        except ClientError as e:
+            if 'DryRunOperation' not in str(e):
+                print("Error: Your credentials are invalid. Please make sure you entered them correctly.")
+                raise e
+            else:
+                print("Success! Your credentials are valid.")
+                set_credentials(aws_access_key_id, aws_secret_access_key)
+                break
+        except:
+            print("Sorry, there was an error validating your credentials. Check you have enabled the correct permissions.")
 
 argv = sys.argv[1:]
 opts, args = getopt.getopt(argv, "hi:I:t:w:o:s", ["help", "inputHash", "hashFile", "hashType", "wordlist", "outputFile", "setup"])
@@ -62,14 +64,17 @@ for opt, arg in opts:
         print("Input Hash is: " + arg)
         user_hash = arg
     elif opt in ("-I", "--hashFile"):
-        print("Input File is: " + arg)
         hash_file = arg
+        try:
+            with open(hash_file, "r") as f:
+                hashes = f.read()
+        except:
+            print("Error: The file you specified does not exist. Please make sure you have entered the correct path.")
+            exit()
     elif opt in ("-t", "--hashType"):
         hash_type = arg
-        print("Hash Type is: " + arg)
     elif opt in ("-w", "--wordlist"):
         wordlist = arg
-        print("Wordlist is: " + arg + "")
     elif opt in ("-o", "--outputFile"):
         output_file = arg
         print("Output File is: " + arg + "")
@@ -89,7 +94,7 @@ try:
     aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
     aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
 except:
-    print("Error: Your credentials are invalid. Please make sure the credentials in your .env file are correct.")
+    print("Error: Your credentials are invalid. Run --setup again if your credentials have changed.")
     exit()
 
 if hash_file == None or hash_file == "":
