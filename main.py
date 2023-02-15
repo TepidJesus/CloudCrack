@@ -44,7 +44,7 @@ def run_setup():
             print("Sorry, there was an error validating your credentials. Check you have enabled the correct permissions.")
 
 argv = sys.argv[1:]
-opts, args = getopt.getopt(argv, "hi:I:t:w:o:s", ["help", "inputHash", "hashFile", "hashType", "wordlist", "outputFile", "setup"])
+opts, args = getopt.getopt(argv, "hi:I:t:w:o:s:", ["help", "inputHash", "hashFile", "hashType", "wordlist", "outputFile", "setup"])
 
 for opt, arg in opts:
     if opt in ("-h", "--help"):
@@ -60,6 +60,7 @@ for opt, arg in opts:
         sys.exit()
     elif opt in ("-s", "--setup"):
         run_setup()
+        sys.exit()
     elif opt in ("-i", "--inputHash"):
         print("Input Hash is: " + arg)
         user_hash = arg
@@ -99,8 +100,8 @@ except:
 
 if hash_file == None or hash_file == "":
     
-_hash = input("Enter the hash you want to crack: ")
-print("Please wait while I crack your hash...")
+    _hash = input("Enter the hash you want to crack: ")
+    print("Please wait while I crack your hash...")
 
 sqs = boto3.resource('sqs')
 queue = sqs.create_queue(QueueName='hash_queue', Attributes={'DelaySeconds': '5'})
