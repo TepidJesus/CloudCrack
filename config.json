@@ -1,3 +1,26 @@
 {
+    "Attack-Mode": "Dictionary",
+
+    "Dictionary-Attack-Settings": {
+        "wordlist": "C:\\Users\\exampleUser\\Desktop\\Examplewordlist.txt"
+    },
+
+    "Mask-Attack-Settings": {
+        "mask": "?a?a?a?a?a?a?a?a?a",
+        "increment": false
+    }, 
+
+    "Brute-Force-Attack-Settings": {
+        "min-length": 8,
+        "max-length": 8,
+        "increment": false
+    },
+
+    "AWS-Settings": {
+        "vCPU-Limit": 1,
+        "use-spot": true,
+        "region": "us-east-1"
+    }
     
+
 }
