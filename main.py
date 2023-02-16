@@ -125,12 +125,13 @@ except:
     print("Error: Your credentials are invalid. Run --setup again if your credentials have changed.")
     exit()
 
-hashes = []
+
 
 sqs = boto3.resource('sqs')
 delivery_queue = sqs.create_queue(QueueName='delivery_queue', Attributes={'DelaySeconds': '5', "FifoQueue": "true"})
 control_queue = sqs.create_queue(QueueName='control_queue', Attributes={'DelaySeconds': '1', "FifoQueue": "true"})
 
+hashes = []
 if hash_file == None or hash_file == "" & user_hash == None:
     _hash = input("Enter the hash you want to crack: ")
     _hash.strip("\n")
@@ -156,9 +157,14 @@ else:
 
 if len(hashes) == 0:
     print("Error: You have not entered any hashes to crack. Please try again.")
+    delivery_queue.delete()
+    control_queue.delete()
     exit()
 elif (len(hashes) == 1):
     send_hash_request(delivery_queue, wordlist, hash_type, hashes[0])
+else:
+    for _hash in hashes:
+        send_hash_request(delivery_queue, wordlist, hash_type, _hash)
 
 
 
@@ -166,6 +172,7 @@ elif (len(hashes) == 1):
 
 
 delivery_queue.delete()
+control_queue.delete()
 
 
 
