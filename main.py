@@ -1,6 +1,7 @@
 import boto3;
 import os
 import dotenv
+import json
 from botocore.exceptions import ClientError
 
 import sys, getopt
@@ -42,6 +43,32 @@ def run_setup():
                 break
         except:
             print("Sorry, there was an error validating your credentials. Check you have enabled the correct permissions.")
+
+def get_config():
+    try:
+        with open("config.json", "r") as f:
+            config = json.load(f)
+    except:
+        print("Error: The config file does not exist. Did you delete it? Go get a new one from the repository, it's kind of important.")
+        exit()
+    return config
+
+def send_hash_request(delivery_queue, wordlist, hash_code, user_hash):
+    message = {
+        "wordlist": wordlist,
+        "hash_type": hash_code,
+        "hash": user_hash
+    }
+    response = delivery_queue.send_message(MessageBody=json.dumps(message), MessageGroupId="1")
+    return response
+
+def send_command_request(control_queue, command):
+    message = {
+        "command": command
+    }
+    response = control_queue.send_message(MessageBody=json.dumps(message), MessageGroupId="1")
+    return response
+
 
 argv = sys.argv[1:]
 opts, args = getopt.getopt(argv, "hi:I:t:w:o:s:", ["help", "inputHash", "hashFile", "hashType", "wordlist", "outputFile", "setup"])
@@ -98,15 +125,47 @@ except:
     print("Error: Your credentials are invalid. Run --setup again if your credentials have changed.")
     exit()
 
-if hash_file == None or hash_file == "":
-    
-    _hash = input("Enter the hash you want to crack: ")
-    print("Please wait while I crack your hash...")
+hashes = []
 
 sqs = boto3.resource('sqs')
-queue = sqs.create_queue(QueueName='hash_queue', Attributes={'DelaySeconds': '5'})
-print(queue.url)
-queue.delete()
+delivery_queue = sqs.create_queue(QueueName='delivery_queue', Attributes={'DelaySeconds': '5', "FifoQueue": "true"})
+control_queue = sqs.create_queue(QueueName='control_queue', Attributes={'DelaySeconds': '1', "FifoQueue": "true"})
+
+if hash_file == None or hash_file == "" & user_hash == None:
+    _hash = input("Enter the hash you want to crack: ")
+    _hash.strip("\n")
+    _hash.strip()
+    hashes.append(_hash)
+elif (user_hash != None):
+    user_hash.strip("\n")
+    user_hash.strip()
+    hashes.append(user_hash)
+else:
+    try:
+        with open(hash_file, "r") as f:
+            hashes = f.readlines() 
+    except:
+        print("Error: The file you specified does not exist. Please make sure you have entered the correct path.")
+        exit()
+
+    for _hash in hashes:
+        _hash = _hash.strip()
+        if _hash != "":
+            hashes.append(_hash)
+
+
+if len(hashes) == 0:
+    print("Error: You have not entered any hashes to crack. Please try again.")
+    exit()
+elif (len(hashes) == 1):
+    send_hash_request(delivery_queue, wordlist, hash_type, hashes[0])
+
+
+
+
+
+
+delivery_queue.delete()
 
 
 
