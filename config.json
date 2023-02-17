@@ -2,7 +2,9 @@
     "Attack-Mode": "Dictionary",
 
     "Dictionary-Attack-Settings": {
-        "wordlist": "C:\\Users\\exampleUser\\Desktop\\Examplewordlist.txt"
+        "Custom_wordlist": false,
+        "custom_wordlist": "C:\\Users\\exampleUser\\Desktop\\Examplewordlist.txt",
+        "seclists_wordlist": "rockyou.txt"
     },
 
     "Mask-Attack-Settings": {
@@ -19,7 +21,8 @@
     "AWS-Settings": {
         "vCPU-Limit": 1,
         "use-spot": true,
-        "region": "us-east-1"
+        "region": "us-east-1",
+        "image_id": "ami-0a313d6098716f372"
     }
     
 

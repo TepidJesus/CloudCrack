@@ -3,7 +3,6 @@ import os
 import dotenv
 import json
 from botocore.exceptions import ClientError
-
 import sys, getopt
 
 TEST_AMI_ID = "ami-05bfbece1ed5beb54" # Ubuntu 18.04 AMI
@@ -69,6 +68,15 @@ def send_command_request(control_queue, command):
     response = control_queue.send_message(MessageBody=json.dumps(message), MessageGroupId="1")
     return response
 
+def check_file_presence(file_location):
+    try:
+        with open(file_location, "r") as f:
+            file = f.read()
+        return True
+    except:
+        return False
+
+
 
 argv = sys.argv[1:]
 opts, args = getopt.getopt(argv, "hi:I:t:w:o:s:", ["help", "inputHash", "hashFile", "hashType", "wordlist", "outputFile", "setup"])
@@ -93,11 +101,8 @@ for opt, arg in opts:
         user_hash = arg
     elif opt in ("-I", "--hashFile"):
         hash_file = arg
-        try:
-            with open(hash_file, "r") as f:
-                hashes = f.read()
-        except:
-            print("Error: The file you specified does not exist. Please make sure you have entered the correct path.")
+        if not check_file_presence(hash_file):
+            print("Error: The file you specified does not exist. Please check the file path and try again.")
             exit()
     elif opt in ("-t", "--hashType"):
         hash_type = arg
@@ -105,8 +110,6 @@ for opt, arg in opts:
         wordlist = arg
     elif opt in ("-o", "--outputFile"):
         output_file = arg
-        print("Output File is: " + arg + "")
-        sys.exit()
     else:
         print("Invalid Option. Please use -h or --help for more information.")
 
@@ -125,7 +128,7 @@ except:
     print("Error: Your credentials are invalid. Run --setup again if your credentials have changed.")
     exit()
 
-
+config = get_config()
 
 sqs = boto3.resource('sqs')
 delivery_queue = sqs.create_queue(QueueName='delivery_queue', Attributes={'DelaySeconds': '5', "FifoQueue": "true"})
@@ -160,11 +163,17 @@ if len(hashes) == 0:
     delivery_queue.delete()
     control_queue.delete()
     exit()
-elif (len(hashes) == 1):
-    send_hash_request(delivery_queue, wordlist, hash_type, hashes[0])
 else:
-    for _hash in hashes:
-        send_hash_request(delivery_queue, wordlist, hash_type, _hash)
+    ec2 = boto3.resource('ec2')
+    hashing_instance = ec2.create_instances(ImageId=config["aws-settings"]["image_id"], MinCount=1, MaxCount=1, 
+                                            InstanceType=config["aws-settings"]["instance_type"], KeyName=config["key_name"], 
+                                            SecurityGroupIds=[config["security_group_id"]], 
+                                            SubnetId=config["subnet_id"])
+    if (len(hashes) == 1):
+        send_hash_request(delivery_queue, wordlist, hash_type, hashes[0])
+    else:
+        for _hash in hashes:
+            send_hash_request(delivery_queue, wordlist, hash_type, _hash)
 
 
 
