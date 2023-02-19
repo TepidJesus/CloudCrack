@@ -1,3 +1,4 @@
+import json
 ### HashCat Command Format: hashcat -a <attack_mode> -m <hash_type> <hash> <wordlist/mask/length> -w 4
 class JobHandler:
 
@@ -21,6 +22,12 @@ class Job:
 
     def __str__(self):
         return f"Job ID: {self.job_id} | Hash: {self.hash} | Wordlist: {self.wordlist} | Hash Type: {self.hash_type} | Job Status: {self.job_status}"
+    
+    def to_json(self):
+        return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
+    
+    def from_json(self, json_string):
+        return json.loads(json_string)
 
 
         
