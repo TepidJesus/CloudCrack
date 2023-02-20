@@ -22,6 +22,16 @@ class JobHandler:
         job = Job(self.get_new_job_id(), _hash, hash_type, attack_mode, required_info)
         self.job_log[job.job_id] = job
         return job
+    
+    def send_job(self, job):
+        self.delivery_queue.send_message(MessageBody=job.to_json())
+    
+    def cancel_job(self, job):
+        self.job_log[job.job_id].job_status = STATUS.CANCELLED
+        self.control_queue.send_message(MessageBody=Command(job.job_id, STATUS.CANCELLED).to_json())
+    
+    def get_job_status(self, job):
+        return self.job_log[job.job_id].job_status
 
 class STATUS:
     CREATED = 1,
