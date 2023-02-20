@@ -157,12 +157,12 @@ else:
     hashing_instance[0].wait_until_running()
 
     job_handler = JobHandler(delivery_queue, control_queue, return_queue)
+
+    for _hash in hashes:
+        hash_job = job_handler.create_job(hashes[0], hash_type, attack_mode=config["attack-mode"], required_info=wordlist)
+        job_handler.send_job(hash_job)
+
     
-    if (len(hashes) == 1):
-        job_handler.create_job(hashes[0], hash_type, attack_mode=
-    else:
-        for _hash in hashes:
-            send_hash_request(delivery_queue, wordlist, hash_type, _hash)
 
 
 
