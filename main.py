@@ -4,6 +4,7 @@ import dotenv
 import json
 from botocore.exceptions import ClientError
 import sys, getopt
+from job_handler import JobHandler, Job, STATUS, Command
 
 TEST_AMI_ID = "ami-05bfbece1ed5beb54" # Ubuntu 18.04 AMI
 
@@ -115,8 +116,9 @@ except:
 config = get_config()
 
 sqs = boto3.resource('sqs')
-delivery_queue = sqs.create_queue(QueueName='delivery_queue', Attributes={'DelaySeconds': '5', "FifoQueue": "true"})
+delivery_queue = sqs.create_queue(QueueName='delivery_queue', Attributes={'DelaySeconds': '`', "FifoQueue": "true"})
 control_queue = sqs.create_queue(QueueName='control_queue', Attributes={'DelaySeconds': '1', "FifoQueue": "true"})
+return_queue = sqs.create_queue(QueueName='return_queue', Attributes={'DelaySeconds': '1', "FifoQueue": "true"})
 
 hashes = []
 if hash_file == None or hash_file == "" & user_hash == None:
@@ -151,8 +153,13 @@ else:
     ec2 = boto3.resource('ec2')
     hashing_instance = ec2.create_instances(ImageId=config["aws-settings"]["image_id"], MinCount=1, MaxCount=1, 
                                             InstanceType=config["aws-settings"]["instance_type"])
+    print("Instance Created. Waiting for instance to be ready...")
+    hashing_instance[0].wait_until_running()
+
+    job_handler = JobHandler(delivery_queue, control_queue, return_queue)
+    
     if (len(hashes) == 1):
-        send_hash_request(delivery_queue, wordlist, hash_type, hashes[0])
+        job_handler.create_job(hashes[0], hash_type, attack_mode=
     else:
         for _hash in hashes:
             send_hash_request(delivery_queue, wordlist, hash_type, _hash)
