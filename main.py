@@ -52,22 +52,6 @@ def get_config():
         exit()
     return config
 
-def send_hash_request(delivery_queue, wordlist, hash_code, user_hash):
-    message = {
-        "wordlist": wordlist,
-        "hash_type": hash_code,
-        "hash": user_hash
-    }
-    response = delivery_queue.send_message(MessageBody=json.dumps(message), MessageGroupId="1")
-    return response
-
-def send_command_request(control_queue, command):
-    message = {
-        "command": command
-    }
-    response = control_queue.send_message(MessageBody=json.dumps(message), MessageGroupId="1")
-    return response
-
 def check_file_presence(file_location):
     try:
         with open(file_location, "r") as f:
@@ -166,9 +150,7 @@ if len(hashes) == 0:
 else:
     ec2 = boto3.resource('ec2')
     hashing_instance = ec2.create_instances(ImageId=config["aws-settings"]["image_id"], MinCount=1, MaxCount=1, 
-                                            InstanceType=config["aws-settings"]["instance_type"], KeyName=config["key_name"], 
-                                            SecurityGroupIds=[config["security_group_id"]], 
-                                            SubnetId=config["subnet_id"])
+                                            InstanceType=config["aws-settings"]["instance_type"])
     if (len(hashes) == 1):
         send_hash_request(delivery_queue, wordlist, hash_type, hashes[0])
     else:
