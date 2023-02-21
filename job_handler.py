@@ -14,8 +14,8 @@ class JobHandler:
         self.delivery_queue.send_message(MessageBody=job.to_json())
 
     def get_new_job_id(self):
-        num = self.job_number
-        self.job_number += 1
+        num = self.job_id
+        self.job_id += 1
         return num
     
     def create_job(self, _hash, hash_type, attack_mode, required_info):
