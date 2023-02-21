@@ -23,15 +23,19 @@ class JobHandler:
         self.job_log[job.job_id] = job
         return job
     
-    def send_job(self, job):
-        self.delivery_queue.send_message(MessageBody=job.to_json())
-    
     def cancel_job(self, job):
         self.job_log[job.job_id].job_status = STATUS.CANCELLED
         self.control_queue.send_message(MessageBody=Command(job.job_id, STATUS.CANCELLED).to_json())
     
     def get_job_status(self, job):
         return self.job_log[job.job_id].job_status
+
+    def check_for_response(self):
+        messages = self.return_queue.receive_messages(MaxNumberOfMessages=10)
+        if len(messages) > 0:
+            return messages
+        else:
+            return None
 
 class STATUS:
     CREATED = 1,
