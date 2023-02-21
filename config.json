@@ -22,7 +22,8 @@
         "vCPU-Limit": 1,
         "use-spot": true,
         "region": "us-east-1",
-        "image_id": "ami-0a313d6098716f372"
+        "image_id": "ami-00eeedc4036573771",
+        "instance_type": "t2.micro"
     }
     
 
