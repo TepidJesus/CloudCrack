@@ -31,16 +31,16 @@ class Job:
 
 class JobHandler:
 
-    def __init__(self, delivery_queue, control_queue, return_queue):
-        self.delivery_queue = delivery_queue
+    def __init__(self, outbound_queue, control_queue, inbound_queue):
+        self.outbound_queue = outbound_queue
         self.control_queue = control_queue
-        self.return_queue = return_queue
+        self.inbound_queue = inbound_queue
 
         self.job_id = 1
         self.job_log = {}
 
     def send_job(self, job):
-        self.delivery_queue.send_message(MessageBody=job.to_json())
+        self.outbound_queue.send_message(MessageBody=job.to_json())
 
     def get_new_job_id(self):
         num = self.job_id
@@ -60,7 +60,7 @@ class JobHandler:
         return self.job_log[job.job_id].job_status
 
     def check_for_response(self):
-        messages = self.return_queue.receive_messages(MaxNumberOfMessages=10)
+        messages = self.inbound_queue.receive_messages(MaxNumberOfMessages=10)
         if len(messages) > 0:
             return messages
         else:
