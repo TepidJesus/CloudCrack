@@ -1,12 +1,12 @@
 ## A modified version of the JobHandler class from job_handler.py:
 import sh
-import boto3
 from job_handler import JobHandler, Job, STATUS, Command, REQUEST
 
 class HashcatHandler(JobHandler):
     
         def __init__(self, outbound_queue, control_queue, inbound_queue):
             super().__init__(outbound_queue, control_queue, inbound_queue)
+            self.hashcat_status = 0
         
         def create_job(self, _hash, hash_type, attack_mode, required_info):
             raise NotImplementedError("This method is not implemented for HashcatHandler")
@@ -26,10 +26,12 @@ class HashcatHandler(JobHandler):
             else:
                 return None
     
-        def load_job(self, job):
+        def load_job(self, job): 
             job_as_command = sh.hashcat('-a', job.attack_mode, '-m', job.hash_type, job.hash, job.required_info, '-w', '4')
             if len(self.hashcat_queue) == 0:
                 job_as_command()
+                job.status = STATUS.RUNNING
+                self.hashcat_status = 1
             else:
                 self.hashcat_queue.append(job)
 
@@ -38,7 +40,7 @@ class HashcatHandler(JobHandler):
             self.return_job(job)
 
         def return_job(self, job):
-            self.outbound_queue.send_message(MessageBody=job.to_json())
+            self.outbound_queue.send_message(MessageBody=job.to_json(), MessageGroupId="1", MessageDeduplicationId=str(job.job_id))
 
 
 

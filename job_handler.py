@@ -8,6 +8,7 @@ class STATUS:
     FAILED = 4,
     CANCELLED = 5,
     SENT = 6
+    PENDING = 7
 
 class Job:
 
@@ -40,7 +41,7 @@ class JobHandler:
         self.job_log = {}
 
     def send_job(self, job):
-        self.outbound_queue.send_message(MessageBody=job.to_json())
+        self.outbound_queue.send_message(MessageBody=job.to_json(), MessageGroupId="1", MessageDeduplicationId=str(job.job_id))
 
     def get_new_job_id(self):
         num = self.job_id
@@ -56,8 +57,11 @@ class JobHandler:
         self.job_log[job.job_id].job_status = STATUS.CANCELLED
         self.control_queue.send_message(MessageBody=Command(job.job_id, REQUEST.CANCEL).to_json())
     
-    def get_job_status(self, job):
+    def get_local_job_status(self, job):
         return self.job_log[job.job_id].job_status
+    
+    def request_job_status(self, job):
+        self.control_queue.send_message(MessageBody=Command(job.job_id, REQUEST.STATUS).to_json())
 
     def check_for_response(self):
         messages = self.inbound_queue.receive_messages(MaxNumberOfMessages=10)

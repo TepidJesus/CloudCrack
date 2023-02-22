@@ -4,7 +4,9 @@ import dotenv
 import json
 from botocore.exceptions import ClientError
 import sys, getopt
+import time
 from job_handler import JobHandler, Job, STATUS, Command
+import signal
 
 TEST_AMI_ID = "ami-05bfbece1ed5beb54" # Ubuntu 18.04 AMI
 
@@ -60,12 +62,21 @@ def check_file_presence(file_location):
         return True
     except:
         return False
+    
+def signal_handler(sig, frame, delivery_queue, control_queue, return_queue, hashing_instance):
+    print('You pressed Ctrl+C!')
+    delivery_queue.delete()
+    control_queue.delete()
+    return_queue.delete()
+    hashing_instance[0].terminate()
+    print("All resources have been deleted. Goodbye!")
+    sys.exit(0)
 
 
 
 argv = sys.argv[1:]
 opts, args = getopt.getopt(argv, "hi:I:t:w:o:s:", ["help", "inputHash", "hashFile", "hashType", "wordlist", "outputFile", "setup"])
-
+hash_file = None
 for opt, arg in opts:
     if opt in ("-h", "--help"):
         print("Example: main.py -i <inputHash> -I <inputFile> -t <hashType>, -w <wordlist>\n")
@@ -114,11 +125,12 @@ except:
     exit()
 
 config = get_config()
+print(config)
 
 sqs = boto3.resource('sqs')
-delivery_queue = sqs.create_queue(QueueName='delivery_queue', Attributes={'DelaySeconds': '`', "FifoQueue": "true"})
-control_queue = sqs.create_queue(QueueName='control_queue', Attributes={'DelaySeconds': '1', "FifoQueue": "true"})
-return_queue = sqs.create_queue(QueueName='return_queue', Attributes={'DelaySeconds': '1', "FifoQueue": "true"})
+delivery_queue = sqs.create_queue(QueueName='deliveryQueue.fifo', Attributes={'DelaySeconds': '1', 'FifoQueue': 'true'})
+control_queue = sqs.create_queue(QueueName='controlQueue.fifo', Attributes={'DelaySeconds': '1', 'FifoQueue': 'true'})
+return_queue = sqs.create_queue(QueueName='returnQueue.fifo', Attributes={'DelaySeconds': '1', 'FifoQueue': 'true'})
 
 hashes = []
 if hash_file == None or hash_file == "" & user_hash == None:
@@ -151,16 +163,29 @@ if len(hashes) == 0:
     exit()
 else:
     ec2 = boto3.resource('ec2')
-    hashing_instance = ec2.create_instances(ImageId=config["aws-settings"]["image_id"], MinCount=1, MaxCount=1, 
-                                            InstanceType=config["aws-settings"]["instance_type"])
+    hashing_instance = ec2.create_instances(ImageId=config["AWS-Settings"]["image_id"], MinCount=1, MaxCount=1, 
+                                            InstanceType=config["AWS-Settings"]["instance_type"])
     print("Instance Created. Waiting for instance to be ready...")
     hashing_instance[0].wait_until_running()
 
     job_handler = JobHandler(delivery_queue, control_queue, return_queue)
 
     for _hash in hashes:
-        hash_job = job_handler.create_job(hashes[0], hash_type, attack_mode=config["attack-mode"], required_info=wordlist)
+        hash_job = job_handler.create_job(hashes[0], hash_type, attack_mode=config["Attack-Mode"], required_info={"wordlist": "Wordlist Goes Here"})
         job_handler.send_job(hash_job)
+
+
+while True:
+    signal.signal(signal.SIGINT, signal_handler)
+    time.sleep(5)
+    break
+    # response = job_handler.check_for_response()
+    # if (response == None):
+    #     time.sleep(1)
+    # else:
+    #     if (response.length == 1):
+
+
 
     
 
@@ -171,6 +196,8 @@ else:
 
 delivery_queue.delete()
 control_queue.delete()
+return_queue.delete()
+hashing_instance[0].terminate()
 
 
 
