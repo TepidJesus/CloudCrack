@@ -64,11 +64,20 @@ class JobHandler:
         self.control_queue.send_message(MessageBody=Command(job.job_id, REQUEST.STATUS).to_json())
 
     def check_for_response(self):
-        messages = self.inbound_queue.receive_messages(MaxNumberOfMessages=10)
+        messages = self.inbound_queue.receive_messages(MaxNumberOfMessages=1)
         if len(messages) > 0:
-            return messages
+            messages[0].delete()
+            return messages[0]
         else:
             return None
+        
+    def from_json(self, json_str):
+        return json.loads(json_str)
+        
+    def load_from_json(self, json_string):
+        json_string = self.from_json(json_string)
+        job = Job(int(json_string["job_id"]), json_string["hash"], json_string["hash_type"], json_string["attack_mode"], dict(json_string["required_info"]))
+        return job
 
 class REQUEST:
     CANCEL = 1,
@@ -87,8 +96,6 @@ class Command:
     def to_json(self):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
     
-    def from_json(self, json_string):
-        return json.loads(json_string)
     
         
         
