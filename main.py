@@ -63,14 +63,22 @@ def check_file_presence(file_location):
     except:
         return False
     
-def signal_handler(sig, frame, delivery_queue, control_queue, return_queue, hashing_instance):
+def signal_handler(sig, frame):
     print('You pressed Ctrl+C!')
-    delivery_queue.delete()
-    control_queue.delete()
-    return_queue.delete()
-    hashing_instance[0].terminate()
+    cleanup()
     print("All resources have been deleted. Goodbye!")
     sys.exit(0)
+
+def cleanup():
+    sqs = boto3.resource('sqs')
+    queues = sqs.queues.all()
+    for queue in queues:
+        queue.delete()
+
+    ec2 = boto3.resource('ec2')
+    instances = ec2.instances.all()
+    for instance in instances:
+        instance.terminate()
 
 
 
@@ -125,15 +133,10 @@ except:
     exit()
 
 config = get_config()
-print(config)
-
-sqs = boto3.resource('sqs')
-delivery_queue = sqs.create_queue(QueueName='deliveryQueue.fifo', Attributes={'DelaySeconds': '1', 'FifoQueue': 'true'})
-control_queue = sqs.create_queue(QueueName='controlQueue.fifo', Attributes={'DelaySeconds': '1', 'FifoQueue': 'true'})
-return_queue = sqs.create_queue(QueueName='returnQueue.fifo', Attributes={'DelaySeconds': '1', 'FifoQueue': 'true'})
 
 hashes = []
-if hash_file == None or hash_file == "" & user_hash == None:
+
+if hash_file == None and user_hash == None:
     _hash = input("Enter the hash you want to crack: ")
     _hash.strip("\n")
     _hash.strip()
@@ -154,6 +157,11 @@ else:
         _hash = _hash.strip()
         if _hash != "":
             hashes.append(_hash)
+
+sqs = boto3.resource('sqs')
+delivery_queue = sqs.create_queue(QueueName='deliveryQueue.fifo', Attributes={'DelaySeconds': '1', 'FifoQueue': 'true'})
+control_queue = sqs.create_queue(QueueName='controlQueue.fifo', Attributes={'DelaySeconds': '1', 'FifoQueue': 'true'})
+return_queue = sqs.create_queue(QueueName='returnQueue.fifo', Attributes={'DelaySeconds': '1', 'FifoQueue': 'true'})
 
 
 if len(hashes) == 0:
@@ -178,30 +186,3 @@ else:
 while True:
     signal.signal(signal.SIGINT, signal_handler)
     time.sleep(5)
-    break
-    # response = job_handler.check_for_response()
-    # if (response == None):
-    #     time.sleep(1)
-    # else:
-    #     if (response.length == 1):
-
-
-
-    
-
-
-
-
-
-
-delivery_queue.delete()
-control_queue.delete()
-return_queue.delete()
-hashing_instance[0].terminate()
-
-
-
-
-
-
-
