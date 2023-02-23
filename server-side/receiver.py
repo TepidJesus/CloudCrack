@@ -1,42 +1,66 @@
-from sh import hashcat
+#from sh import hashcat
 import boto3
+import time
+from cat_handler import HashcatHandler
 
+
+### HashCat Command Format: hashcat -a <attack_mode> -m <hash_type> <hash> <wordlist/mask/length> -w 4
 
 ## Check For Two aws SQS Queues and assign them to variables
-def check_infrastructure():
+def get_infrastructure():
     sqs = boto3.resource('sqs')
-    delivery = sqs.get_queue_by_name(QueueName='delivery_queue')
-    control = sqs.get_queue_by_name(QueueName='control_queue')
-    return delivery, control
+    delivery = sqs.get_queue_by_name(QueueName='deliveryQueue.fifo')
+    control = sqs.get_queue_by_name(QueueName='controlQueue.fifo')
+    return_queue = sqs.get_queue_by_name(QueueName='returnQueue.fifo')
+    return delivery, control, return_queue
 
 ## Check for messages in the delivery queue
 def check_queue(queue):
     messages = queue.receive_messages(MaxNumberOfMessages=1)
-    return messages
+    if len(messages) > 0:
+        return messages[0]
+    return None
+
+# def load_job(job, job_queue):
+#     # job_as_command
+#     if job_queue.len() == 0:
+#         hashcat('-a', job.attack_mode, '-m', job.hash_type, job.hash, job.required_info, '-w', '4')
+#     else:
+#         job_queue.append(job)
+
+def complete_job_test(job): ### For testing message responses between consumer and producer
+    print("Job Complete")
+    job.job_status = STATUS.COMPLETED
+    job.required_info = {"hash": job.hash, "dehashed": "password"}
+    return job
+
 
 ## Send a message to the control queue
-def send_control_message(queue2, message):
-    response = queue2.send_message(MessageBody=message)
-    return response
+
+
 
 def main():
-    delivery, control = check_infrastructure()
+    delivery, control, return_queue = get_infrastructure()
+    cat_handler = HashcatHandler(return_queue, control, delivery)
+    print("Receiver is running...")
     while True:
-        messages = check_queue(delivery)
-        if len(messages) > 0:
-            for message in messages:
-                print(message.body)
-                message.delete()
-                send_control_message(control, "Cracking...")
-                hashcat(message.body)
-                send_control_message(control, "Cracked!")
-                break
-        else:
-            messages = check_queue(control)
-            if len(messages) > 0:
-                for message in messages:
-                    print(message.body)
-                    message.delete()
-                    break
-            else:
-                continue
+
+        new_commands = check_queue(control)
+        print("Checking for new commands...")
+
+        if new_commands != None:
+            for command in new_commands:
+                print(command.body)
+                command.delete()
+        
+        new_job = check_queue(delivery)
+        print("Checking for new jobs...")
+        if new_job != None:
+            print("New job found!")
+            job = cat_handler.load_from_json(new_job.body)
+            print(job.to_json())
+            new_job.delete()
+
+        time.sleep(5)
+
+main()
