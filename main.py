@@ -183,6 +183,16 @@ else:
         job_handler.send_job(hash_job)
 
 
-while True:
-    signal.signal(signal.SIGINT, signal_handler)
-    time.sleep(5)
+try:
+    while True:
+        signal.signal(signal.SIGINT, signal_handler)
+        time.sleep(5)
+        
+        new_message = job_handler.check_for_response()
+        if new_message != None:
+            print(new_message.body)
+except KeyboardInterrupt:
+    pass
+except:
+    cleanup()
+
