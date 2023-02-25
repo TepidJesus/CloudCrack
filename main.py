@@ -85,6 +85,7 @@ def cleanup():
 argv = sys.argv[1:]
 opts, args = getopt.getopt(argv, "hi:I:t:w:o:s:", ["help", "inputHash", "hashFile", "hashType", "wordlist", "outputFile", "setup"])
 hash_file = None
+user_hash = None
 for opt, arg in opts:
     if opt in ("-h", "--help"):
         print("Example: main.py -i <inputHash> -I <inputFile> -t <hashType>, -w <wordlist>\n")
@@ -152,11 +153,13 @@ else:
     except:
         print("Error: The file you specified does not exist. Please make sure you have entered the correct path.")
         exit()
-
+    
+    processed_hashes = []
     for _hash in hashes:
         _hash = _hash.strip()
         if _hash != "":
-            hashes.append(_hash)
+            processed_hashes.append(_hash)
+    hashes = processed_hashes
 
 sqs = boto3.resource('sqs')
 delivery_queue = sqs.create_queue(QueueName='deliveryQueue.fifo', Attributes={'DelaySeconds': '1', 'FifoQueue': 'true'})
@@ -166,9 +169,7 @@ return_queue = sqs.create_queue(QueueName='returnQueue.fifo', Attributes={'Delay
 
 if len(hashes) == 0:
     print("Error: You have not entered any hashes to crack. Please try again.")
-    delivery_queue.delete()
-    control_queue.delete()
-    exit()
+    cleanup()
 else:
     ec2 = boto3.resource('ec2')
     hashing_instance = ec2.create_instances(ImageId=config["AWS-Settings"]["image_id"], MinCount=1, MaxCount=1, 
@@ -179,7 +180,7 @@ else:
     job_handler = JobHandler(delivery_queue, control_queue, return_queue)
 
     for _hash in hashes:
-        hash_job = job_handler.create_job(hashes[0], hash_type, attack_mode=config["Attack-Mode"], required_info={"wordlist": "Wordlist Goes Here"})
+        hash_job = job_handler.create_job(_hash, hash_type, attack_mode=config["Attack-Mode"], required_info={"wordlist": "Wordlist Goes Here"})
         job_handler.send_job(hash_job)
 
 
@@ -191,6 +192,7 @@ try:
         new_message = job_handler.check_for_response()
         if new_message != None:
             print(new_message.body)
+
 except KeyboardInterrupt:
     pass
 except:
