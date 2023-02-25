@@ -4,7 +4,7 @@ import json
 class STATUS:
     CREATED = 1,
     RUNNING = 2,
-    FINISHED = 3,
+    COMPLETED = 3,
     FAILED = 4,
     CANCELLED = 5,
     SENT = 6
@@ -26,8 +26,6 @@ class Job:
     def to_json(self):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
     
-    def from_json(self, json_string):
-        return json.loads(json_string)
 
 
 class JobHandler:
