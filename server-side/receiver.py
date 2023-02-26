@@ -2,6 +2,9 @@
 import boto3
 import time
 from cat_handler import HashcatHandler
+import sys
+sys.path.insert(0, "../")
+from job_handler import STATUS
 
 
 ### HashCat Command Format: hashcat -a <attack_mode> -m <hash_type> <hash> <wordlist/mask/length> -w 4
@@ -60,7 +63,11 @@ def main():
             job = cat_handler.load_from_json(new_job.body)
             print(job.to_json())
             new_job.delete()
-
+            time.sleep(5)
+            comp_job = complete_job_test(job)
+            print("Returning Job")
+            cat_handler.return_job(comp_job)
+            time.sleep(1)
         time.sleep(5)
 
 main()
