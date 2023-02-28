@@ -32,14 +32,25 @@ class HashcatHandler(JobHandler):
             else:
                 return None
     
-        def load_job(self, job): 
-            job_as_command = hashcat('-a', job.attack_mode, '-m', job.hash_type, job.hash, job.required_info, '-w', '4')
-            if len(self.hashcat_queue) == 0:
-                job_as_command()
-                job.status = STATUS.RUNNING
-                self.hashcat_status = 1
-            else:
-                self.hashcat_queue.append(job)
+        def run_job(self, job):
+            if self.running:
+                return
+            
+            job.job_status = STATUS.RUNNING
+
+            if job.attack_mode == "mask":
+                job_as_command = hashcat(f'-a3', f'-m{job.hash_type}', job.hash, job.required_info, 
+                                         '-w4', "--status", "--quiet", "--status-json", _bg=True, 
+                                         _out=self.process_output, _ok_code=[0,1])
+                                         
+            elif job.attack_mode == "dictionary":
+                job_as_command = hashcat(f'-a0', f'-m{job.hash_type}', job.hash, job.required_info, 
+                                         '-w4', "--status", "--quiet", "--status-json", _bg=True, 
+                                         _out=self.process_output, _ok_code=[0,1])
+            
+            job_as_command.wait()
+            self.running = False
+
                 
         def process_output(self, line):
             try:
@@ -57,6 +68,7 @@ class HashcatHandler(JobHandler):
                 self.running = True
                 job = hashcat('-a3','-m0', "909cc49a73e86ccac31c3f6d5c62c959", "?l?l?l?l?l?l?l?l", '-w4', "--status", "--quiet", "--status-json", _bg=True, _out=self.process_output, _ok_code=[0,1])
                 job.wait()
+                self.running = False
  
 
         def job_complete(self, job):
