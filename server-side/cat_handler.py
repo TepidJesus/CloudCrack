@@ -50,7 +50,7 @@ class HashcatHandler(JobHandler):
                 print("Has Found " + line.strip())
 
 
-        def load_job_test(self):
+        def load_job_test(self): ## Temporary method for testing hashcat
             if self.running:
                 return
             else:
