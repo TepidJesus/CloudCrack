@@ -4,7 +4,6 @@ import sys
 sys.path.insert(0, "../")
 from job_handler import JobHandler, Job, STATUS, Command, REQUEST
 from sh import hashcat
-from io import StringIO
 import json
 
 
