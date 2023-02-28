@@ -4,6 +4,8 @@ import sys
 sys.path.insert(0, "../")
 from job_handler import JobHandler, Job, STATUS, Command, REQUEST
 from sh import hashcat
+from io import StringIO
+import json
 
 
 
@@ -39,6 +41,14 @@ class HashcatHandler(JobHandler):
                 self.hashcat_status = 1
             else:
                 self.hashcat_queue.append(job)
+                
+        def process_output(self, line):
+            try:
+                line_json = json.loads(line)
+                print(f"Current Status: {line_json['status']}") 
+                print(f"Progress: {int(line_json['progress'][0]) / int(line_json['progress'][1]) * 100:.2f}%")
+            except:
+                print("Has Found " + line.strip())
 
 
         def load_job_test(self):
@@ -46,7 +56,8 @@ class HashcatHandler(JobHandler):
                 return
             else:
                 self.running = True
-                hashcat('-a', 3, '-m', 0, "cc3a0280e4fc1415930899896574e118", "?l?l?l?l", '-w', '4')
+                job = hashcat('-a3','-m0', "909cc49a73e86ccac31c3f6d5c62c959", "?l?l?l?l?l?l?l?l", '-w4', "--status", "--quiet", "--status-json", _bg=True, _out=self.process_output, _ok_code=[0,1])
+                job.wait()
  
 
         def job_complete(self, job):
@@ -55,6 +66,12 @@ class HashcatHandler(JobHandler):
 
         def return_job(self, job):
             self.outbound_queue.send_message(MessageBody=job.to_json(), MessageGroupId="1", MessageDeduplicationId=str(job.job_id))
+
+
+
+
+
+
 
 
 
