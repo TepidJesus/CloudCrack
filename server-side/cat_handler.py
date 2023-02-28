@@ -13,7 +13,7 @@ class HashcatHandler(JobHandler):
         def __init__(self, outbound_queue, control_queue, inbound_queue):
             super().__init__(outbound_queue, control_queue, inbound_queue)
             self.hashcat_status = 0
-            self.running = False
+            self.current_job = None
         
         def create_job(self, _hash, hash_type, attack_mode, required_info):
             raise NotImplementedError("This method is not implemented for HashcatHandler")
@@ -33,10 +33,11 @@ class HashcatHandler(JobHandler):
                 return None
     
         def run_job(self, job):
-            if self.running:
+            if self.current_job is not None:
                 return
             
             job.job_status = STATUS.RUNNING
+            self.current_job = job
 
             if job.attack_mode == "mask":
                 job_as_command = hashcat(f'-a3', f'-m{job.hash_type}', job.hash, job.required_info, 
@@ -49,42 +50,30 @@ class HashcatHandler(JobHandler):
                                          _out=self.process_output, _ok_code=[0,1])
             
             job_as_command.wait()
-            self.running = False
+            self.current_job = None
 
                 
         def process_output(self, line):
             try:
                 line_json = json.loads(line)
                 print(f"Current Status: {line_json['status']}") 
-                print(f"Progress: {int(line_json['progress'][0]) / int(line_json['progress'][1]) * 100:.2f}%")
+                print(f"Progress: {int(line_json['progress'][0]) / int(line_json['progress'][1]) * 100:.2f}%\n")
+                self.report_progress(line_json['status'], int(line_json['progress'][0]) / int(line_json['progress'][1]) * 100)
             except:
-                print("Has Found " + line.strip())
+                self.job_complete(self.current_job, line.split(":")[1])
+                return True
 
-
-        def load_job_test(self): ## Temporary method for testing hashcat
-            if self.running:
-                return
-            else:
-                self.running = True
-                job = hashcat('-a3','-m0', "909cc49a73e86ccac31c3f6d5c62c959", "?l?l?l?l?l?l?l?l", '-w4', "--status", "--quiet", "--status-json", _bg=True, _out=self.process_output, _ok_code=[0,1])
-                job.wait()
-                self.running = False
+        def report_progress(self, current_status, progress):
+            print(f"Reporting progress: {progress:.2f}%")
+            self.outbound_queue.send_message(MessageBody=json.dumps({"job_id": self.current_job.job_id, "current_status": current_status, "progress": progress}), 
+                                                                    MessageGroupId="Status")
  
-
-        def job_complete(self, job):
-            self.job_log[job.job_id].job_status = STATUS.COMPLETE
+        def job_complete(self, job, result):
+            job.job_status = STATUS.COMPLETED
+            job.required_info = result
+            print(f"Job {job.job_id} completed with result: {result}")
             self.return_job(job)
 
         def return_job(self, job):
-            self.outbound_queue.send_message(MessageBody=job.to_json(), MessageGroupId="1", MessageDeduplicationId=str(job.job_id))
-
-
-
-
-
-
-
-
-
-
-
+            print("Returning job")
+            self.outbound_queue.send_message(MessageBody=job.to_json(), MessageGroupId="Job")
