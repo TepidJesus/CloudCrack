@@ -81,10 +81,9 @@ def cleanup():
     for instance in instances:
         instance.terminate()
 
-
-
+# TODO: Add wizard to walk new user through cracking a hash
 argv = sys.argv[1:]
-opts, args = getopt.getopt(argv, "hi:I:t:w:o:s:", ["help", "inputHash", "hashFile", "hashType", "wordlist", "outputFile", "setup"])
+opts, args = getopt.getopt(argv, "ha:i:I:t:m:w:o:s:", ["attackType", "help", "inputHash", "hashFile", "hashType", "wordlist", "outputFile", "setup"])
 hash_file = None
 user_hash = None
 for opt, arg in opts:
@@ -93,28 +92,46 @@ for opt, arg in opts:
         print("Options:")
         print("     -h, --help                        Show This Menue")
         print("     -i, --inputHash      <inputHash>  The hash to be cracked")
+        print("     -a, --attackType     <attackType> The type of attack to be used (e.g dictionary (0), mask (3))")
         print("     -I, --hashFile       <inputFile>  The loaction of a txt file with a list of hashes to crack  (e.g /home/user/Desktop/hashes.txt)")
         print("     -t, --hashType       <hashType>   The type of hash to be cracked (e.g md5, sha1, sha256, sha512)")
-        print("     -w, --wordlist       <wordlist>   The name of a wordlist from the Seclists repository (e.g rockyou.txt). The repository can be found at https://github.com/danielmiessler/SecLists/tree/master/Passwords")
+        print("     -m, --mask           <mask>       The mask to be used for the mask attack (e.g ?d?d?d?d). See https://hashcat.net/wiki/doku.php?id=mask_attack for more information.")
+        print("     -w, --wordlist       <wordlist>   The name and location of a wordlist (e.g /home/user/rockyou.txt).")
         print("     -o, --outputFile     <outputFile> The location of the output file (e.g /home/user/Desktop/output.txt). Will output to the console if not specified.")
-        print("     -s, --setup                      Run the setup wizard")
+        print("     -s, --setup                       Run the setup wizard")
         sys.exit()
+    
     elif opt in ("-s", "--setup"):
         run_setup()
         sys.exit()
+    elif opt in ("-a", "--attackType"):
+        attack_type = arg
+        if attack_type == None:
+            print("Error: You must specify an attack type.")
+            attack_type = input("Please enter an attack type (e.g dictionary (0), mask (3)): ")
     elif opt in ("-i", "--inputHash"):
-        print("Input Hash is: " + arg)
         user_hash = arg
+        if user_hash == None:
+            print("Error: You must specify a hash.")
+            user_hash = input("Please enter a hash: ")
     elif opt in ("-I", "--hashFile"):
         hash_file = arg
         if not check_file_presence(hash_file):
             print("Error: The file you specified does not exist. Please check the file path and try again.")
             exit()
+        if user_hash != None:
+            print("Error: You cannot specify both a hash and a hash file! Please try again.")
+            exit()
     elif opt in ("-t", "--hashType"):
         hash_type = arg
         if hash_type == None:
-            print("Error: You must specify a hash type. Please use -h or --help for more information.")
-            exit()
+            print("Error: You must specify a hash type.")
+            hash_type = input("Please enter a hash type (e.g Use the hash codes found on the hashcat wiki): ")
+    elif opt in ("-m", "--mask"):
+        mask = arg
+        if mask == None:
+            print("Error: You must specify a mask.")
+            mask = input("Please enter a mask (e.g ?d?d?d?d). See https://hashcat.net/wiki/doku.php?id=mask_attack for more information: ")
     elif opt in ("-w", "--wordlist"):
         wordlist = arg
     elif opt in ("-o", "--outputFile"):
@@ -185,7 +202,10 @@ else:
     job_handler = JobHandler(delivery_queue, control_queue, return_queue)
 
     for _hash in hashes:
-        hash_job = job_handler.create_job(_hash, hash_type, attack_mode=config["Attack-Mode"], required_info={"wordlist": "Wordlist Goes Here"})
+        if attack_type == "dictionary" or attack_type == "0":
+            hash_job = job_handler.create_job(_hash, hash_type, attack_mode=attack_type, required_info={"wordlist": "Wordlist Goes Here"})
+        elif attack_type == "mask" or attack_type == "3":
+            hash_job = job_handler.create_job(_hash, hash_type, attack_mode=attack_type, required_info={})
         job_handler.send_job(hash_job)
 
 
