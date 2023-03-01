@@ -81,9 +81,30 @@ def cleanup():
     for instance in instances:
         instance.terminate()
 
+def valid_mask(mask):
+    if mask == None:
+        return False
+    
+    if "?" not in mask:
+        return False
+    
+    if len(mask) <= 1:
+        return False
+    
+    for i in range(len(mask)):
+        char = mask[i]
+        if char != "?" and char != "d" and char != "l" and char != "u" and char != "s" and char != "a" and char != "h" and char != "H" and char != "b":
+            return False
+        if char == "?" and i % 2 != 0:
+            return False
+        if char != "?" and i % 2 == 0:
+            return False
+    return True
+
+
 # TODO: Add wizard to walk new user through cracking a hash
 argv = sys.argv[1:]
-opts, args = getopt.getopt(argv, "ha:i:I:t:m:w:o:s:", ["attackType", "help", "inputHash", "hashFile", "hashType", "wordlist", "outputFile", "setup"])
+opts, args = getopt.getopt(argv, "ha:i:I:t:m:w:o:s:", ["help", "attackType", "inputHash", "hashFile", "hashType", "wordlist", "outputFile", "setup"])
 hash_file = None
 user_hash = None
 for opt, arg in opts:
@@ -129,11 +150,14 @@ for opt, arg in opts:
             hash_type = input("Please enter a hash type (e.g Use the hash codes found on the hashcat wiki): ")
     elif opt in ("-m", "--mask"):
         mask = arg
-        if mask == None:
-            print("Error: You must specify a mask.")
-            mask = input("Please enter a mask (e.g ?d?d?d?d). See https://hashcat.net/wiki/doku.php?id=mask_attack for more information: ")
+        while not valid_mask(mask):
+            print("Error: The mask you specified is invalid. Please check the mask and try again.")
+            mask = input("Please enter a mask (e.g ?d?d?d?d): ")
     elif opt in ("-w", "--wordlist"):
         wordlist = arg
+        while not check_file_presence(wordlist):
+            print("Error: The wordlist you specified does not exist.")
+            wordlist = input("Please enter a wordlist (e.g /home/user/rockyou.txt): ")
     elif opt in ("-o", "--outputFile"):
         output_file = arg
     else:
