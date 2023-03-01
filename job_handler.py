@@ -39,7 +39,7 @@ class JobHandler:
         self.job_log = {}
 
     def send_job(self, job):
-        self.outbound_queue.send_message(MessageBody=job.to_json(), MessageGroupId="1", MessageDeduplicationId=str(job.job_id))
+        self.outbound_queue.send_message(MessageBody=job.to_json(), MessageGroupId="Job", MessageDeduplicationId=str(job.job_id))
 
     def get_new_job_id(self):
         num = self.job_id

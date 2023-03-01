@@ -129,6 +129,7 @@ try:
     dotenv.load_dotenv()
     aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
     aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+    session = boto3.Session(aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key)
 except:
     print("Error: Your credentials are invalid. Run --setup again if your credentials have changed.")
     exit()
@@ -161,7 +162,7 @@ else:
             processed_hashes.append(_hash)
     hashes = processed_hashes
 
-sqs = boto3.resource('sqs')
+sqs = session.resource('sqs')
 delivery_queue = sqs.create_queue(QueueName='deliveryQueue.fifo', Attributes={'DelaySeconds': '1', 'FifoQueue': 'true'})
 control_queue = sqs.create_queue(QueueName='controlQueue.fifo', Attributes={'DelaySeconds': '1', 'FifoQueue': 'true'})
 return_queue = sqs.create_queue(QueueName='returnQueue.fifo', Attributes={'DelaySeconds': '1', 'FifoQueue': 'true'})
@@ -171,7 +172,7 @@ if len(hashes) == 0:
     print("Error: You have not entered any hashes to crack. Please try again.")
     cleanup()
 else:
-    ec2 = boto3.resource('ec2')
+    ec2 = session.resource('ec2')
     hashing_instance = ec2.create_instances(ImageId=config["AWS-Settings"]["image_id"], MinCount=1, MaxCount=1, 
                                             InstanceType=config["AWS-Settings"]["instance_type"])
     print("Instance Created. Waiting for instance to be ready...")
