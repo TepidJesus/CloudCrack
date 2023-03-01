@@ -42,6 +42,7 @@ def run_setup():
             else:
                 print("Success! Your credentials are valid.")
                 set_credentials(aws_access_key_id, aws_secret_access_key)
+                print("You're all set! Have fun, but remember to be safe and to only use this tool for legitimate purposes.")
                 break
         except:
             print("Sorry, there was an error validating your credentials. Check you have enabled the correct permissions.")
@@ -111,6 +112,9 @@ for opt, arg in opts:
             exit()
     elif opt in ("-t", "--hashType"):
         hash_type = arg
+        if hash_type == None:
+            print("Error: You must specify a hash type. Please use -h or --help for more information.")
+            exit()
     elif opt in ("-w", "--wordlist"):
         wordlist = arg
     elif opt in ("-o", "--outputFile"):
@@ -129,7 +133,7 @@ try:
     dotenv.load_dotenv()
     aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
     aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-    session = boto3.Session(aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key)
+    session = boto3.Session(aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name='us-east-2')
 except:
     print("Error: Your credentials are invalid. Run --setup again if your credentials have changed.")
     exit()
