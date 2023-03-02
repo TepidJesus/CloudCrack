@@ -14,16 +14,26 @@ class HashcatHandler(JobHandler):
             super().__init__(outbound_queue, control_queue, inbound_queue)
             self.hashcat_status = 0
             self.current_job = None
+            self.process = None
         
         def create_job(self, _hash, hash_type, attack_mode, required_info):
             raise NotImplementedError("This method is not implemented for HashcatHandler")
         
         def cancel_job(self, job):
-            self.job_log[job.job_id].job_status = STATUS.CANCELLED
+            if self.current_job is None:
+                return
+            elif self.current_job.job_id != job.job_id:
+                return
+            
+            self.current_job.job_status = STATUS.CANCELLED
+            self.process.kill()
+            self.current_job = None
+            self.process = None
+            
             self.return_job(job)
 
         def get_job_status(self, job):
-            return self.job_log[job.job_id].job_status
+            return self.current_job.job_status
     
         def check_for_response(self):
             messages = self.inbound_queue.receive_messages(MaxNumberOfMessages=10)
@@ -38,19 +48,27 @@ class HashcatHandler(JobHandler):
             
             job.job_status = STATUS.RUNNING
             self.current_job = job
+            try:
+                if job.attack_mode == "mask":
+                    job_as_command = hashcat(f'-a3', f'-m{job.hash_type}', job.hash, job.required_info, 
+                                            '-w4', "--status", "--quiet", "--status-json", _bg=True, 
+                                            _out=self.process_output, _ok_code=[0,1])
+                                            
+                elif job.attack_mode == "dictionary":
+                    job_as_command = hashcat(f'-a0', f'-m{job.hash_type}', job.hash, job.required_info, 
+                                            '-w4', "--status", "--quiet", "--status-json", _bg=True, 
+                                            _out=self.process_output, _ok_code=[0,1])
+                    
+                self.process = job_as_command
 
-            if job.attack_mode == "mask":
-                job_as_command = hashcat(f'-a3', f'-m{job.hash_type}', job.hash, job.required_info, 
-                                         '-w4', "--status", "--quiet", "--status-json", _bg=True, 
-                                         _out=self.process_output, _ok_code=[0,1])
-                                         
-            elif job.attack_mode == "dictionary":
-                job_as_command = hashcat(f'-a0', f'-m{job.hash_type}', job.hash, job.required_info, 
-                                         '-w4', "--status", "--quiet", "--status-json", _bg=True, 
-                                         _out=self.process_output, _ok_code=[0,1])
-            
+            except hashcat.ErrorReturnCode_1: # When hashcat could exhaust the dictionary or mask
+                self.job_complete(self.current_job, "EXHAUSTED")
+            except hashcat.ErrorReturnCode: # When hashcat encounters an error that must be reported to dev
+                self.job_complete(self.current_job, f"ERROR: {job.exit_code}")
+
             job_as_command.wait()
             self.current_job = None
+            self.process = None
 
                 
         def process_output(self, line):
@@ -69,7 +87,13 @@ class HashcatHandler(JobHandler):
                                                                     MessageGroupId="Status")
  
         def job_complete(self, job, result):
-            job.job_status = STATUS.COMPLETED
+            if result == "EXHAUSTED":
+                job.job_status = STATUS.EXHAUSTED
+            elif result[:5] == "ERROR":
+                job.job_status = STATUS.FAILED
+                result = result[6:]
+            else:
+                job.job_status = STATUS.COMPLETED
             job.required_info = result
             print(f"Job {job.job_id} completed with result: {result}")
             self.return_job(job)
