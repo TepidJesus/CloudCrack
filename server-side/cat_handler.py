@@ -5,10 +5,11 @@ sys.path.insert(0, "../")
 from job_handler import JobHandler, Job, STATUS, Command, REQUEST
 from sh import hashcat
 import json
+import sh
 
 
 
-class HashcatHandler(JobHandler):
+class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler class and split mananging jobs and running jobs into two classes
     
         def __init__(self, outbound_queue, control_queue, inbound_queue):
             super().__init__(outbound_queue, control_queue, inbound_queue)
@@ -26,17 +27,23 @@ class HashcatHandler(JobHandler):
                 return
             
             self.current_job.job_status = STATUS.CANCELLED
-            self.process.kill()
+            try:
+                self.process.kill()
+            except sh.SignalException_SIGKILL: # When job is cancelled
+                self.job_complete(self.current_job, "CANCELLED")
+                
             self.current_job = None
             self.process = None
-            
+
+            print("Job cancelled")
+
             self.return_job(job)
 
         def get_job_status(self, job):
             return self.current_job.job_status
     
         def check_for_response(self):
-            messages = self.inbound_queue.receive_messages(MaxNumberOfMessages=10)
+            messages = self.inbound_queue.receive_messages(MaxNumberOfMessages=1)
             if len(messages) > 0:
                 return messages
             else:
@@ -48,27 +55,38 @@ class HashcatHandler(JobHandler):
             
             job.job_status = STATUS.RUNNING
             self.current_job = job
+
+            print("Job started")
+
             try:
-                if job.attack_mode == "mask":
+                if job.attack_mode == "3":
                     job_as_command = hashcat(f'-a3', f'-m{job.hash_type}', job.hash, job.required_info, 
                                             '-w4', "--status", "--quiet", "--status-json", _bg=True, 
                                             _out=self.process_output, _ok_code=[0,1])
+                    self.process = job_as_command
+                    #job_as_command.wait()
+                    
                                             
-                elif job.attack_mode == "dictionary":
+                elif job.attack_mode == "0":
                     job_as_command = hashcat(f'-a0', f'-m{job.hash_type}', job.hash, job.required_info, 
                                             '-w4', "--status", "--quiet", "--status-json", _bg=True, 
                                             _out=self.process_output, _ok_code=[0,1])
+                    self.process = job_as_command
+                    #job_as_command.wait()
+
+                else:
+                    print("Invalid attack mode")
+                    return
+
+                print("Job completed")
                     
-                self.process = job_as_command
-
-            except hashcat.ErrorReturnCode_1: # When hashcat could exhaust the dictionary or mask
-                self.job_complete(self.current_job, "EXHAUSTED")
-            except hashcat.ErrorReturnCode: # When hashcat encounters an error that must be reported to dev
+            except sh.ErrorReturnCode: # When hashcat encounters an error that must be reported to dev
                 self.job_complete(self.current_job, f"ERROR: {job.exit_code}")
+            except Exception as e:
+                print(e)
 
-            job_as_command.wait()
-            self.current_job = None
-            self.process = None
+            
+            
 
                 
         def process_output(self, line):
@@ -77,27 +95,41 @@ class HashcatHandler(JobHandler):
                 print(f"Current Status: {line_json['status']}") 
                 print(f"Progress: {int(line_json['progress'][0]) / int(line_json['progress'][1]) * 100:.2f}%\n")
                 self.report_progress(line_json['status'], int(line_json['progress'][0]) / int(line_json['progress'][1]) * 100)
+                
+                if line_json['status'] == 5:
+                    self.job_complete(self.current_job, "EXHAUSTED")
+                    return True
+                
             except:
+                print("Job completed")
                 self.job_complete(self.current_job, line.split(":")[1])
                 return True
+
+            
 
         def report_progress(self, current_status, progress):
             print(f"Reporting progress: {progress:.2f}%")
             self.outbound_queue.send_message(MessageBody=json.dumps({"job_id": self.current_job.job_id, "current_status": current_status, "progress": progress}), 
-                                                                    MessageGroupId="Status")
+                                                                    MessageGroupId="Status", MessageDeduplicationId=str(self.current_job.job_id) + str(current_status) + str(progress))
  
         def job_complete(self, job, result):
             if result == "EXHAUSTED":
                 job.job_status = STATUS.EXHAUSTED
+                result = ""
             elif result[:5] == "ERROR":
                 job.job_status = STATUS.FAILED
                 result = result[6:]
+            elif result == "CANCELLED":
+                job.job_status = STATUS.CANCELLED
+                result = ""
             else:
                 job.job_status = STATUS.COMPLETED
             job.required_info = result
+            self.current_job = None
+            self.process = None
             print(f"Job {job.job_id} completed with result: {result}")
             self.return_job(job)
 
         def return_job(self, job):
             print("Returning job")
-            self.outbound_queue.send_message(MessageBody=job.to_json(), MessageGroupId="Job")
+            self.outbound_queue.send_message(MessageBody=job.to_json(), MessageGroupId="Job", MessageDeduplicationId=str(job.job_id) + str(job.job_status), )
