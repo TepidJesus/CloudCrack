@@ -107,6 +107,7 @@ argv = sys.argv[1:]
 opts, args = getopt.getopt(argv, "ha:i:I:t:m:w:o:s:", ["help", "attackType", "inputHash", "hashFile", "hashType", "wordlist", "outputFile", "setup"])
 hash_file = None
 user_hash = None
+attack_type = None
 for opt, arg in opts:
     if opt in ("-h", "--help"):
         print("Example: main.py -i <inputHash> -I <inputFile> -t <hashType>, -w <wordlist>\n")
@@ -147,7 +148,7 @@ for opt, arg in opts:
         hash_type = arg
         if hash_type == None:
             print("Error: You must specify a hash type.")
-            hash_type = input("Please enter a hash type (e.g Use the hash codes found on the hashcat wiki): ")
+            hash_type = input("Please enter a hash type (hint: Use the hash codes found on the hashcat wiki): ")
     elif opt in ("-m", "--mask"):
         mask = arg
         while not valid_mask(mask):
@@ -212,7 +213,6 @@ delivery_queue = sqs.create_queue(QueueName='deliveryQueue.fifo', Attributes={'D
 control_queue = sqs.create_queue(QueueName='controlQueue.fifo', Attributes={'DelaySeconds': '1', 'FifoQueue': 'true'})
 return_queue = sqs.create_queue(QueueName='returnQueue.fifo', Attributes={'DelaySeconds': '1', 'FifoQueue': 'true'})
 
-
 if len(hashes) == 0:
     print("Error: You have not entered any hashes to crack. Please try again.")
     cleanup()
@@ -229,7 +229,9 @@ else:
         if attack_type == "dictionary" or attack_type == "0":
             hash_job = job_handler.create_job(_hash, hash_type, attack_mode=attack_type, required_info={"wordlist": "Wordlist Goes Here"})
         elif attack_type == "mask" or attack_type == "3":
-            hash_job = job_handler.create_job(_hash, hash_type, attack_mode=attack_type, required_info={})
+            hash_job = job_handler.create_job(_hash, hash_type, attack_mode=attack_type, required_info=mask)
+        
+        print(hash_job.to_json()) ## DEBUG
         job_handler.send_job(hash_job)
 
 
@@ -239,11 +241,35 @@ try:
         time.sleep(5)
         
         new_message = job_handler.check_for_response()
+        status = None
+        returned_job = None
         if new_message != None:
-            print(new_message.body)
-
+            try:
+                returned_job = job_handler.load_from_json(new_message.body)
+            except Exception as e:
+                print(e)
+                status = new_message.body
+        
+        if status != None:
+            print(f"Status of {status['job_id']}: {status['current_status']}") ## DEBUG
+            ## Need to add progress bar here
+        elif returned_job != None:
+            if returned_job.job_status == STATUS.COMPLETED:
+                job_handler.delete_job(returned_job)
+                print(f"Job {returned_job.job_id} completed. The result is {returned_job.required_info}") ## DEBUG
+            elif returned_job.job_status == STATUS.FAILED:
+                job_handler.delete_job(returned_job)
+                print(f"Job {returned_job.job_id} failed. The error message is {returned_job.required_info}") ## DEBUG
+            elif returned_job.job_status == STATUS.CANCELLED:
+                job_handler.delete_job(returned_job)
+                print(f"Job {returned_job.job_id} was sucessfully canceled.") ## DEBUG
+            elif returned_job.job_status == STATUS.EXHAUSTED:
+                job_handler.delete_job(returned_job)
+                print(f"Job {returned_job.job_id} was not in the wordlist or mask you provided.") ## DEBUG
+            
 except KeyboardInterrupt:
     pass
-except:
+except Exception as e:
+    print(e)
     cleanup()
 
