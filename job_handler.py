@@ -8,7 +8,8 @@ class STATUS:
     FAILED = 4,
     CANCELLED = 5,
     SENT = 6
-    PENDING = 7
+    PENDING = 7,
+    EXHAUSTED = 8
 
 class Job:
 
@@ -26,8 +27,6 @@ class Job:
     def to_json(self):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
     
-
-
 class JobHandler:
 
     def __init__(self, outbound_queue, control_queue, inbound_queue):
@@ -39,6 +38,7 @@ class JobHandler:
         self.job_log = {}
 
     def send_job(self, job):
+        job.job_status = STATUS.SENT
         self.outbound_queue.send_message(MessageBody=job.to_json(), MessageGroupId="Job", MessageDeduplicationId=str(job.job_id))
 
     def get_new_job_id(self):
@@ -69,13 +69,33 @@ class JobHandler:
         else:
             return None
         
-    def from_json(self, json_str):
-        return json.loads(json_str)
-        
     def load_from_json(self, json_string):
         json_string = self.from_json(json_string)
-        job = Job(int(json_string["job_id"]), json_string["hash"], json_string["hash_type"], json_string["attack_mode"], dict(json_string["required_info"]))
+        job = Job(int(json_string["job_id"]), json_string["hash"], json_string["hash_type"], self.convert_status(json_string["job_status"]), json_string["attack_mode"], json_string["required_info"])
         return job
+    
+    def convert_status(self, status):
+        if status == "1":
+            return STATUS.CREATED
+        elif status == "2":
+            return STATUS.RUNNING
+        elif status == "3":
+            return STATUS.COMPLETED
+        elif status == "4":
+            return STATUS.FAILED
+        elif status == "5":
+            return STATUS.CANCELLED
+        elif status == "6":
+            return STATUS.SENT
+        elif status == "7":
+            return STATUS.PENDING
+        elif status == "8":
+            return STATUS.EXHAUSTED
+        else:
+            return None
+
+    def delete_job(self, job):
+        del self.job_log[job.job_id]
 
 class REQUEST:
     CANCEL = 1,
