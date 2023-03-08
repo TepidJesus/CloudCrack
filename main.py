@@ -230,7 +230,8 @@ else:
             hash_job = job_handler.create_job(_hash, hash_type, attack_mode=attack_type, required_info={"wordlist": "Wordlist Goes Here"})
         elif attack_type == "mask" or attack_type == "3":
             hash_job = job_handler.create_job(_hash, hash_type, attack_mode=attack_type, required_info=mask)
-        
+
+        print(hash_job) ## DEBUG
         print(hash_job.to_json()) ## DEBUG
         job_handler.send_job(hash_job)
 
@@ -247,13 +248,13 @@ try:
             try:
                 returned_job = job_handler.load_from_json(new_message.body)
             except Exception as e:
-                print(e)
-                status = new_message.body
-        
+                status = json.loads(new_message.body)
+            
         if status != None:
-            print(f"Status of {status['job_id']}: {status['current_status']}") ## DEBUG
+            print(f"Status of {status['job_id']}: {status['progress']}") ## DEBUG
             ## Need to add progress bar here
         elif returned_job != None:
+            print(f"Returned Job: {returned_job}")
             if returned_job.job_status == STATUS.COMPLETED:
                 job_handler.delete_job(returned_job)
                 print(f"Job {returned_job.job_id} completed. The result is {returned_job.required_info}") ## DEBUG
@@ -270,6 +271,6 @@ try:
 except KeyboardInterrupt:
     pass
 except Exception as e:
-    print(e)
     cleanup()
+    raise e
 
