@@ -1,23 +1,24 @@
 import json
+from enum import Enum
 ### HashCat Command Format: hashcat -a <attack_mode> -m <hash_type> <hash> <wordlist/mask/length> -w 4
 
-class STATUS:
-    CREATED = 1,
-    RUNNING = 2,
-    COMPLETED = 3,
-    FAILED = 4,
-    CANCELLED = 5,
+class STATUS(Enum):
+    CREATED = 1
+    RUNNING = 2
+    COMPLETED = 3
+    FAILED = 4
+    CANCELLED = 5
     SENT = 6
-    PENDING = 7,
+    PENDING = 7
     EXHAUSTED = 8
 
 class Job:
 
-    def __init__(self, job_id, _hash, hash_type, attack_mode, required_info):
+    def __init__(self, job_id, _hash, hash_type, status, attack_mode, required_info): ## Need to add ability to set job status when creating job. Adjust elsewhere accordingly
         self.job_id = job_id
         self.hash = _hash
         self.hash_type = hash_type
-        self.job_status = STATUS.CREATED
+        self.job_status = status
         self.attack_mode = attack_mode
         self.required_info = required_info
 
@@ -47,7 +48,7 @@ class JobHandler:
         return num
     
     def create_job(self, _hash, hash_type, attack_mode, required_info):
-        job = Job(self.get_new_job_id(), _hash, hash_type, attack_mode, required_info)
+        job = Job(self.get_new_job_id(), _hash, hash_type, STATUS.CREATED, attack_mode, required_info)
         self.job_log[job.job_id] = job
         return job
     
@@ -68,6 +69,9 @@ class JobHandler:
             return messages[0]
         else:
             return None
+        
+    def from_json(self, json_str):
+        return json.loads(json_str)
         
     def load_from_json(self, json_string):
         json_string = self.from_json(json_string)
