@@ -7,6 +7,7 @@ import sys, getopt
 import time
 from job_handler import JobHandler, Job, STATUS, Command
 import signal
+import uuid
 
 TEST_AMI_ID = "ami-05bfbece1ed5beb54" # Ubuntu 18.04 AMI
 
@@ -100,6 +101,10 @@ def valid_mask(mask):
         if char != "?" and i % 2 == 0:
             return False
     return True
+
+
+def create_bucket_name(bucket_prefix):
+    return ''.join([bucket_prefix, str(uuid.uuid4())])
 
 
 # TODO: Add wizard to walk new user through cracking a hash
@@ -213,6 +218,15 @@ sqs = session.resource('sqs')
 delivery_queue = sqs.create_queue(QueueName='deliveryQueue.fifo', Attributes={'DelaySeconds': '1', 'FifoQueue': 'true'})
 control_queue = sqs.create_queue(QueueName='controlQueue.fifo', Attributes={'DelaySeconds': '1', 'FifoQueue': 'true'})
 return_queue = sqs.create_queue(QueueName='returnQueue.fifo', Attributes={'DelaySeconds': '1', 'FifoQueue': 'true'})
+
+if wordlist != None:
+    # Create an s3 session and Upload wordlist to S3 bucket for use by the instance
+    s3 = session.resource('s3')
+
+    bucket_response = s3.create_bucket(
+            Bucket=create_bucket_name("wordlist-bucket"),
+            CreateBucketConfiguration={
+            'LocationConstraint': s3.region_name})
 
 if len(hashes) == 0:
     print("Error: You have not entered any hashes to crack. Please try again.")
