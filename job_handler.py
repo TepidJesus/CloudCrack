@@ -1,8 +1,8 @@
 import json
-from enum import Enum
+from enum import Enum, IntEnum
 ### HashCat Command Format: hashcat -a <attack_mode> -m <hash_type> <hash> <wordlist/mask/length> -w 4
 
-class STATUS(Enum):
+class STATUS(IntEnum):
     CREATED = 1
     RUNNING = 2
     COMPLETED = 3
@@ -79,21 +79,21 @@ class JobHandler:
         return job
     
     def convert_status(self, status):
-        if status == "1":
+        if status == 1:
             return STATUS.CREATED
-        elif status == "2":
+        elif status == 2:
             return STATUS.RUNNING
-        elif status == "3":
+        elif status == 3:
             return STATUS.COMPLETED
-        elif status == "4":
+        elif status == 4:
             return STATUS.FAILED
-        elif status == "5":
+        elif status == 5:
             return STATUS.CANCELLED
-        elif status == "6":
+        elif status == 6:
             return STATUS.SENT
-        elif status == "7":
+        elif status == 7:
             return STATUS.PENDING
-        elif status == "8":
+        elif status == 8:
             return STATUS.EXHAUSTED
         else:
             return None

@@ -167,6 +167,7 @@ for opt, arg in opts:
 
 print("Welcome to EZ Cracker!")
 
+
 if (not dotenv_present()):
     print("Error: You have not set up your AWS credentials. Please run the setup wizard by using the -s or --setup flag.")
     exit()
