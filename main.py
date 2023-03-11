@@ -82,6 +82,12 @@ def cleanup():
     for instance in instances:
         instance.terminate()
 
+    s3 = boto3.resource('s3')
+    buckets = s3.buckets.all()
+    for bucket in buckets:
+        bucket.objects.all().delete()
+        bucket.delete()
+
 def valid_mask(mask):
     if mask == None:
         return False
@@ -214,6 +220,13 @@ else:
             processed_hashes.append(_hash)
     hashes = processed_hashes
 
+if wordlist != None and attack_type != "3":
+    print("Error: You cannot specify a wordlist and an attack type other than dictionary attack. Please try again.")
+    exit()
+elif attack_type == 0 and mask == None:
+    print("Error: You must specify a mask for a mask attack.")
+    exit()
+
 sqs = session.resource('sqs')
 delivery_queue = sqs.create_queue(QueueName='deliveryQueue.fifo', Attributes={'DelaySeconds': '1', 'FifoQueue': 'true'})
 control_queue = sqs.create_queue(QueueName='controlQueue.fifo', Attributes={'DelaySeconds': '1', 'FifoQueue': 'true'})
@@ -221,12 +234,20 @@ return_queue = sqs.create_queue(QueueName='returnQueue.fifo', Attributes={'Delay
 
 if wordlist != None:
     # Create an s3 session and Upload wordlist to S3 bucket for use by the instance
-    s3 = session.resource('s3')
-
-    bucket_response = s3.create_bucket(
-            Bucket=create_bucket_name("wordlist-bucket"),
+    s3 = session.client('s3')
+    bucket_name = create_bucket_name("wordlist-bucket")
+    wordlist_bucket = s3.create_bucket(
+            Bucket=bucket_name,
             CreateBucketConfiguration={
-            'LocationConstraint': s3.region_name})
+            'LocationConstraint': config["AWS-Settings"]["region"]})
+    
+    try:
+        response = s3.upload_file(wordlist, bucket_name, "UsersWordlist")
+    except Exception as e:
+        print("File upload failed. This is an unrecoverable error. Please try again.")
+        cleanup()
+        raise(e)
+        exit()
 
 if len(hashes) == 0:
     print("Error: You have not entered any hashes to crack. Please try again.")

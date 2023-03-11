@@ -21,7 +21,7 @@
     "AWS-Settings": {
         "vCPU-Limit": 1,
         "use-spot": true,
-        "region": "us-east-1",
+        "region": "us-east-2",
         "image_id": "ami-00eeedc4036573771",
         "instance_type": "t2.micro"
     }
