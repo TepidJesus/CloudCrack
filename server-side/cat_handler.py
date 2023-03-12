@@ -6,16 +6,18 @@ from job_handler import JobHandler, Job, STATUS, Command, REQUEST
 from sh import hashcat
 import json
 import sh
+import os
 
 
 
 class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler class and split mananging jobs and running jobs into two classes
     
-        def __init__(self, outbound_queue, control_queue, inbound_queue):
+        def __init__(self, outbound_queue, control_queue, inbound_queue, s3_client):
             super().__init__(outbound_queue, control_queue, inbound_queue)
             self.hashcat_status = 0
             self.current_job = None
             self.process = None
+            self.s3_client = s3_client
         
         def create_job(self, _hash, hash_type, attack_mode, required_info):
             raise NotImplementedError("This method is not implemented for HashcatHandler")
@@ -41,6 +43,12 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
 
         def get_job_status(self, job):
             return self.current_job.job_status
+
+        # Get the wordlist from the S3 bucket
+        def get_wordlist(self, bucket_name):
+            self.s3_client.download_file(bucket_name, "UsersWordlist", "wordlist.txt")
+            return os.getcwd() + "/wordlist.txt"
+
     
         def check_for_response(self):
             messages = self.inbound_queue.receive_messages(MaxNumberOfMessages=1)
@@ -60,11 +68,12 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
 
             try:
                 if job.attack_mode == "3":
-                    job_as_command = hashcat(f'-a3', f'-m{job.hash_type}', job.hash, job.required_info, 
+                    wrdlst = self.get_wordlist(job.required_info) # Need to add failure handling to return job as failed
+                    print(wrdlst) #DEBUG
+                    job_as_command = hashcat(f'-a3', f'-m{job.hash_type}', job.hash, wrdlst, 
                                             '-w4', "--status", "--quiet", "--status-json", _bg=True, 
                                             _out=self.process_output, _ok_code=[0,1])
                     self.process = job_as_command
-                    #job_as_command.wait()
                     
                                             
                 elif job.attack_mode == "0":
@@ -72,13 +81,10 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
                                             '-w4', "--status", "--quiet", "--status-json", _bg=True, 
                                             _out=self.process_output, _ok_code=[0,1])
                     self.process = job_as_command
-                    #job_as_command.wait()
 
                 else:
                     print("Invalid attack mode")
                     return
-
-                print("Job completed")
                     
             except sh.ErrorReturnCode: # When hashcat encounters an error that must be reported to dev
                 self.job_complete(self.current_job, f"ERROR: {job.exit_code}")
@@ -92,9 +98,9 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
         def process_output(self, line):
             try:
                 line_json = json.loads(line)
-                print(f"Current Status: {line_json['status']}") 
-                print(f"Progress: {int(line_json['progress'][0]) / int(line_json['progress'][1]) * 100:.2f}%\n")
-                self.report_progress(line_json['status'], int(line_json['progress'][0]) / int(line_json['progress'][1]) * 100)
+                # print(f"Current Status: {line_json['status']}") 
+                # print(f"Progress: {int(line_json['progress'][0]) / int(line_json['progress'][1]) * 100:.2f}%\n")
+                self.report_progress( int(line_json['progress'][0]) / int(line_json['progress'][1]) * 100)
                 
                 if line_json['status'] == 5:
                     self.job_complete(self.current_job, "EXHAUSTED")
@@ -107,10 +113,10 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
 
             
 
-        def report_progress(self, current_status, progress):
+        def report_progress(self, progress):
             print(f"Reporting progress: {progress:.2f}%")
-            self.outbound_queue.send_message(MessageBody=json.dumps({"job_id": self.current_job.job_id, "current_status": current_status, "progress": progress}), 
-                                                                    MessageGroupId="Status", MessageDeduplicationId=str(self.current_job.job_id) + str(current_status) + str(progress))
+            self.outbound_queue.send_message(MessageBody=json.dumps({"job_id": self.current_job.job_id, "progress": progress}), 
+                                                                    MessageGroupId="Status", MessageDeduplicationId=str(self.current_job.job_id)+ str(progress))
  
         def job_complete(self, job, result):
             if result == "EXHAUSTED":
@@ -132,4 +138,4 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
 
         def return_job(self, job):
             print("Returning job")
-            self.outbound_queue.send_message(MessageBody=job.to_json(), MessageGroupId="Job", MessageDeduplicationId=str(job.job_id) + str(job.job_status), )
+            self.outbound_queue.send_message(MessageBody=job.to_json(), MessageGroupId="Job", MessageDeduplicationId=str(job.job_id) + str(job.job_status))
