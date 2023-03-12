@@ -67,17 +67,17 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
             print("Job started")
 
             try:
-                if job.attack_mode == "3":
+                if job.attack_mode == "0":
                     wrdlst = self.get_wordlist(job.required_info) # Need to add failure handling to return job as failed
                     print(wrdlst) #DEBUG
-                    job_as_command = hashcat(f'-a3', f'-m{job.hash_type}', job.hash, wrdlst, 
+                    job_as_command = hashcat(f'-a0', f'-m{job.hash_type}', job.hash, wrdlst, 
                                             '-w4', "--status", "--quiet", "--status-json", _bg=True, 
                                             _out=self.process_output, _ok_code=[0,1])
                     self.process = job_as_command
                     
                                             
-                elif job.attack_mode == "0":
-                    job_as_command = hashcat(f'-a0', f'-m{job.hash_type}', job.hash, job.required_info, 
+                elif job.attack_mode == "3":
+                    job_as_command = hashcat(f'-a3', f'-m{job.hash_type}', job.hash, job.required_info, 
                                             '-w4', "--status", "--quiet", "--status-json", _bg=True, 
                                             _out=self.process_output, _ok_code=[0,1])
                     self.process = job_as_command
