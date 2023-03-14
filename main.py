@@ -8,6 +8,8 @@ import time
 from job_handler import JobHandler, Job, STATUS, Command
 import signal
 import uuid
+import alive_progress as alive
+from alive_progress import alive_it
 
 TEST_AMI_ID = "ami-05bfbece1ed5beb54" # Ubuntu 18.04 AMI
 
@@ -119,6 +121,8 @@ opts, args = getopt.getopt(argv, "ha:i:I:t:m:w:o:s:", ["help", "attackType", "in
 hash_file = None
 user_hash = None
 attack_type = None
+hash_type = None
+wordlist = None
 for opt, arg in opts:
     if opt in ("-h", "--help"):
         print("Example: main.py -i <inputHash> -I <inputFile> -t <hashType>, -w <wordlist>\n")
@@ -220,10 +224,10 @@ else:
             processed_hashes.append(_hash)
     hashes = processed_hashes
 
-if wordlist != None and attack_type != "3":
+if wordlist != None and attack_type != "0":
     print("Error: You cannot specify a wordlist and an attack type other than dictionary attack. Please try again.")
     exit()
-elif attack_type == 0 and mask == None:
+elif attack_type == "3" and mask == None:
     print("Error: You must specify a mask for a mask attack.")
     exit()
 
@@ -233,7 +237,6 @@ control_queue = sqs.create_queue(QueueName='controlQueue.fifo', Attributes={'Del
 return_queue = sqs.create_queue(QueueName='returnQueue.fifo', Attributes={'DelaySeconds': '1', 'FifoQueue': 'true'})
 
 if wordlist != None:
-    # Create an s3 session and Upload wordlist to S3 bucket for use by the instance
     s3 = session.client('s3')
     bucket_name = create_bucket_name("wordlist-bucket")
     wordlist_bucket = s3.create_bucket(
@@ -242,11 +245,10 @@ if wordlist != None:
             'LocationConstraint': config["AWS-Settings"]["region"]})
     
     try:
-        response = s3.upload_file(wordlist, bucket_name, "UsersWordlist")
+        response = s3.upload_file(wordlist, bucket_name, "UsersWordlist") # Wait until the file is uploaded?
     except Exception as e:
         print("File upload failed. This is an unrecoverable error. Please try again.")
         cleanup()
-        raise(e)
         exit()
 
 if len(hashes) == 0:
@@ -263,46 +265,44 @@ else:
 
     for _hash in hashes:
         if attack_type == "dictionary" or attack_type == "0":
-            hash_job = job_handler.create_job(_hash, hash_type, attack_mode=attack_type, required_info={"wordlist": "Wordlist Goes Here"})
+            hash_job = job_handler.create_job(_hash, hash_type, attack_mode=attack_type, required_info=bucket_name)
         elif attack_type == "mask" or attack_type == "3":
             hash_job = job_handler.create_job(_hash, hash_type, attack_mode=attack_type, required_info=mask)
-
-        print(hash_job) ## DEBUG
-        print(hash_job.to_json()) ## DEBUG
         job_handler.send_job(hash_job)
 
 
 try:
-    while True:
-        signal.signal(signal.SIGINT, signal_handler)
-        time.sleep(5)
-        
-        new_message = job_handler.check_for_response()
-        status = None
-        returned_job = None
-        if new_message != None:
-            try:
-                returned_job = job_handler.load_from_json(new_message.body)
-            except Exception as e:
-                status = json.loads(new_message.body)
+    with alive.alive_bar(manual=True, total=) as bar:
+        while True:
+            signal.signal(signal.SIGINT, signal_handler)
+            time.sleep(5)
             
-        if status != None:
-            print(f"Status of {status['job_id']}: {status['progress']}") ## DEBUG
-            ## Need to add progress bar here
-        elif returned_job != None:
-            print(f"Returned Job: {returned_job}")
-            if returned_job.job_status == STATUS.COMPLETED:
-                job_handler.delete_job(returned_job)
-                print(f"Job {returned_job.job_id} completed. The result is {returned_job.required_info}") ## DEBUG
-            elif returned_job.job_status == STATUS.FAILED:
-                job_handler.delete_job(returned_job)
-                print(f"Job {returned_job.job_id} failed. The error message is {returned_job.required_info}") ## DEBUG
-            elif returned_job.job_status == STATUS.CANCELLED:
-                job_handler.delete_job(returned_job)
-                print(f"Job {returned_job.job_id} was sucessfully canceled.") ## DEBUG
-            elif returned_job.job_status == STATUS.EXHAUSTED:
-                job_handler.delete_job(returned_job)
-                print(f"Job {returned_job.job_id} was not in the wordlist or mask you provided.") ## DEBUG
+            new_message = job_handler.check_for_response()
+            status = None
+            returned_job = None
+            if new_message != None:
+                try:
+                    returned_job = job_handler.load_from_json(new_message.body)
+                except Exception as e:
+                    status = json.loads(new_message.body)
+                
+            if status != None:
+
+                bar(float(status['progress']) / 100)
+            elif returned_job != None:
+                print(f"Returned Job: {returned_job}")
+                if returned_job.job_status == STATUS.COMPLETED:
+                    job_handler.delete_job(returned_job)
+                    print(f"Job {returned_job.job_id} completed. The result is {returned_job.required_info}") ## DEBUG
+                elif returned_job.job_status == STATUS.FAILED:
+                    job_handler.delete_job(returned_job)
+                    print(f"Job {returned_job.job_id} failed. The error message is {returned_job.required_info}") ## DEBUG
+                elif returned_job.job_status == STATUS.CANCELLED:
+                    job_handler.delete_job(returned_job)
+                    print(f"Job {returned_job.job_id} was sucessfully canceled.") ## DEBUG
+                elif returned_job.job_status == STATUS.EXHAUSTED:
+                    job_handler.delete_job(returned_job)
+                    print(f"Job {returned_job.job_id} was not in the wordlist or mask you provided.") ## DEBUG
             
 except KeyboardInterrupt:
     pass
