@@ -272,11 +272,24 @@ else:
 
 
 try:
-    with alive.alive_bar(manual=True, total=) as bar:
+    signal.signal(signal.SIGINT, signal_handler)
+    total = 0
+    print("Waiting For Job To Start...")
+    while True:
+        time.sleep(1)
+        new_message = job_handler.check_for_response()
+        if new_message != None:
+            try:
+                returned_job = job_handler.load_from_json(new_message.body)
+                break
+            except Exception as e:
+                status = json.loads(new_message.body)
+                total = status['total']
+                break
+
+    with alive.alive_bar(total=total) as bar:
         while True:
-            signal.signal(signal.SIGINT, signal_handler)
             time.sleep(5)
-            
             new_message = job_handler.check_for_response()
             status = None
             returned_job = None
@@ -287,8 +300,7 @@ try:
                     status = json.loads(new_message.body)
                 
             if status != None:
-
-                bar(float(status['progress']) / 100)
+                bar(int(status['current']))
             elif returned_job != None:
                 print(f"Returned Job: {returned_job}")
                 if returned_job.job_status == STATUS.COMPLETED:
@@ -303,7 +315,8 @@ try:
                 elif returned_job.job_status == STATUS.EXHAUSTED:
                     job_handler.delete_job(returned_job)
                     print(f"Job {returned_job.job_id} was not in the wordlist or mask you provided.") ## DEBUG
-            
+                    
+                           
 except KeyboardInterrupt:
     pass
 except Exception as e:
