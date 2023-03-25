@@ -42,29 +42,36 @@ class ClientController:
 
     def print_create(self):
         user_input = ""
-        while user_input != "back":
+
+        _hash = ""
+        hash_type = ""
+        attack_mode = ""
+        mask = ""
+        dictionary = ""
+        
+        while user_input != "back" and user_input != "exit":
             user_input = input("\nCloudCrack > Create > ")
-            if user_input == "options" or user_input == "help":
-                print("\nOptions:")
-                print("hash - the hash to crack")
-                print("hash_type - the type of hash (md5, sha1, sha256, etc.)")
-                print("attack_mode - the attack mode to use (brute_force, dictionary, etc.)")
-                print("mask - The mask to use for a mask attack")
-                print("dictionary - The file location of the dictionary you want to use")
-                print("back - go back to the main menu")
-                print("run - run the job")
-            if user_input[0:5] == "hash ":
-                _hash = user_input[5:].strip()
-                print("Hash set to " + _hash)
-            if user_input[0:10] == "hash_type ": 
-                hash_type = user_input[10:].strip()
-            if user_input[0:12] == "attack_mode ":
-                attack_mode = user_input[12:].strip()
-            if user_input[0:5] == "mask ":
-                mask = user_input[5:].strip()
-            if user_input[0:11] == "dictionary ": 
-                dictionary = user_input[11:].strip()
-            if user_input == "run":
+            input_as_list = user_input.split(" ")
+
+            if input_as_list[0].lower() == "options" or input_as_list[0].lower() == "help":
+                print("Options:")
+                print("Hash: " + _hash)
+                print("Hash Type: " + hash_type)
+                print("Attack Mode: " + attack_mode)
+                print("Mask: " + mask)
+                print("Dictionary: " + dictionary)
+            if input_as_list[0].lower() == "set":
+                if input_as_list[1].lower() == "hash":
+                    _hash = input_as_list[2].strip()
+                elif input_as_list[1].lower() == "hash_type":
+                    hash_type = input_as_list[2].strip()
+                elif input_as_list[1].lower() == "attack_mode":
+                    attack_mode = input_as_list[2].strip()
+                elif input_as_list[1].lower() == "mask":
+                    mask = input_as_list[2].strip()
+                elif input_as_list[1].lower() == "dictionary":
+                    dictionary = input_as_list[2].strip()
+            if input_as_list[0].lower() in ["run", "start", "create"]:
                 if mask != None:
                     required_info = mask
                 elif dictionary != None:
