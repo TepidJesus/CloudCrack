@@ -41,12 +41,41 @@ class ClientController:
             print(job)
 
     def print_create(self):
-        print("\nCreate Job:")
-        _hash = input("Hash: ")
-        hash_type = input("Hash Type: ")
-        attack_mode = input("Attack Mode: ")
-        required_info = input("Required Info: ")
-        return _hash, hash_type, attack_mode, required_info
+        user_input = ""
+        while user_input != "back":
+            user_input = input("\nCloudCrack > Create > ")
+            if user_input == "options" or user_input == "help":
+                print("\nOptions:")
+                print("hash - the hash to crack")
+                print("hash_type - the type of hash (md5, sha1, sha256, etc.)")
+                print("attack_mode - the attack mode to use (brute_force, dictionary, etc.)")
+                print("mask - The mask to use for a mask attack")
+                print("dictionary - The file location of the dictionary you want to use")
+                print("back - go back to the main menu")
+                print("run - run the job")
+            if user_input[0:5] == "hash ":
+                _hash = user_input[5:].strip()
+                print("Hash set to " + _hash)
+            if user_input[0:10] == "hash_type ": 
+                hash_type = user_input[10:].strip()
+            if user_input[0:12] == "attack_mode ":
+                attack_mode = user_input[12:].strip()
+            if user_input[0:5] == "mask ":
+                mask = user_input[5:].strip()
+            if user_input[0:11] == "dictionary ": 
+                dictionary = user_input[11:].strip()
+            if user_input == "run":
+                if mask != None:
+                    required_info = mask
+                elif dictionary != None:
+                    required_info = dictionary
+                else:
+                    raise Exception("No mask or dictionary provided")
+                self.job_handler.create_job(_hash, hash_type, attack_mode, required_info)
+        
+
+        
+
     
 controller = ClientController(None)
 controller.wait_for_user_input()
