@@ -1,3 +1,4 @@
+import alive_progress as alive
 class ClientController:
 
     def __init__(self, job_handler):
@@ -7,18 +8,28 @@ class ClientController:
         self.print_welcome()
         while True:
             user_input = input("\nCloudCrack > ")
-            if user_input == "help":
+            user_input.strip()
+            input_as_list = user_input.split(" ")
+
+            if input_as_list[0] == "help":
                 self.print_help()
-            elif user_input == "exit":
+            elif input_as_list[0] == "exit":
                 self.job_handler.cancel_all_jobs()
                 break
-            elif user_input == "list":
-                self.print_list(self.job_handler.job_log.values())
-            elif user_input == "create":
+            elif input_as_list[0] == "show":
+                if input_as_list[1] == "all":
+                    self.show_current_jobs()
+                else:
+                    try:
+                        job_id = int(input_as_list[1])
+                        self.show_current_job(job_id)
+                    except:
+                        print("Invalid Job ID")
+            elif input_as_list[0] == "create":
                 _hash, hash_type, attack_mode, required_info = self.print_create()
                 job = self.job_handler.create_job(_hash, hash_type, attack_mode, required_info)
                 self.job_handler.send_job(job)
-            elif user_input == "cancel":
+            elif input_as_list[0] == "cancel":
                 job_id = int(input("Job ID: "))
                 self.job_handler.cancel_job(job_id)
         
@@ -35,14 +46,30 @@ class ClientController:
         print("create - create a new job")
         print("cancel - cancel a job")
 
-    def print_list(self, jobs):
-        print("\nJobs:")
-        for job in jobs:
-            print(job)
+    
+    def show_current_jobs(self):
+        print("Current Jobs:\ns")
+        for job in self.job_handler.job_log.values():
+            print("\n---------------------------------")
+            print("Job ID: " + str(job.job_id))
+            print("Hash: " + job._hash)
+            print("Status: " + job.status)
+            print("Progress: " + str((job.progress[0] / job.progress[1])) + "%")
+            print("---------------------------------")
 
-    def print_create(self):
+    def show_current_job(self, job_id):
+        try:
+            job = self.job_handler.job_log[job_id]
+            with alive.alive_bar(total=job.progress[1], stats="{rate}, ETA: {eta}") as bar:
+                while True:
+                    
+        except:
+            raise Exception("Invalid Job ID")
+
+            
+       
+    def show_create_screen(self):
         user_input = ""
-
         _hash = ""
         hash_type = ""
         attack_mode = ""
@@ -79,6 +106,13 @@ class ClientController:
                 else:
                     raise Exception("No mask or dictionary provided")
                 self.job_handler.create_job(_hash, hash_type, attack_mode, required_info)
+            if input_as_list == "clear":
+                _hash = ""
+                hash_type = ""
+                attack_mode = ""
+                mask = ""
+                dictionary = ""
+        return
         
 
         
