@@ -1,4 +1,3 @@
-import alive_progress as alive
 class ClientController:
 
     def __init__(self, job_handler):
@@ -60,9 +59,13 @@ class ClientController:
     def show_current_job(self, job_id):
         try:
             job = self.job_handler.job_log[job_id]
-            with alive.alive_bar(total=job.progress[1], stats="{rate}, ETA: {eta}") as bar:
-                while True:
-                    
+            print("\n---------------------------------")
+            print("Job ID: " + str(job.job_id))
+            print("Hash: " + job._hash)
+            print("Status: " + job.status)
+            print("Progress: " + str((job.progress[0] / job.progress[1])) + "%")
+            print("---------------------------------")
+
         except:
             raise Exception("Invalid Job ID")
 
