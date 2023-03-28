@@ -21,6 +21,7 @@ class Job:
         self.job_status = status
         self.attack_mode = attack_mode
         self.required_info = required_info
+        self.progress = [0,0] # NEED TO INTEGRATE THIS INTO THE REPORTING SOMEHOW
 
     def __str__(self):
         return f"Job ID: {self.job_id} | Hash: {self.hash} | Hash Type: {self.hash_type} | Job Status: {self.job_status}"
@@ -52,9 +53,13 @@ class JobHandler:
         self.job_log[job.job_id] = job
         return job
     
-    def cancel_job(self, job):
-        self.job_log[job.job_id].job_status = STATUS.CANCELLED
-        self.control_queue.send_message(MessageBody=Command(job.job_id, REQUEST.CANCEL).to_json())
+    def cancel_job(self, job_id):
+        self.job_log[job_id].job_status = STATUS.CANCELLED # FIX THIS !!!!!
+        self.control_queue.send_message(MessageBody=Command(job_id, REQUEST.CANCEL).to_json(), MessageGroupId="Command", MessageDeduplicationId=str(job_id) + "CANCEL")
+
+    def cancel_all_jobs(self):
+        for job in self.job_log:
+            self.cancel_job(job)
     
     def get_local_job_status(self, job):
         return self.job_log[job.job_id].job_status
@@ -101,9 +106,9 @@ class JobHandler:
     def delete_job(self, job):
         del self.job_log[job.job_id]
 
-class REQUEST:
-    CANCEL = 1,
-    STATUS = 2,
+class REQUEST(IntEnum):
+    CANCEL = 1
+    STATUS = 2
  
 
 class Command:
