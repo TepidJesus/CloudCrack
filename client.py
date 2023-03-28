@@ -3,6 +3,7 @@ class ClientController:
     def __init__(self, job_handler):
         self.job_handler = job_handler
 
+
     def wait_for_user_input(self):
         self.print_welcome()
         while True:
@@ -16,6 +17,9 @@ class ClientController:
                 self.job_handler.cancel_all_jobs()
                 break
             elif input_as_list[0] == "show":
+                if len(input_as_list) < 2:
+                    print("Use 'show all' to show all jobs or 'show <job_id>' to show a specific job")
+                    continue
                 if input_as_list[1] == "all":
                     self.show_current_jobs()
                 else:
@@ -25,12 +29,15 @@ class ClientController:
                     except:
                         print("Invalid Job ID")
             elif input_as_list[0] == "create":
-                _hash, hash_type, attack_mode, required_info = self.print_create()
+                _hash, hash_type, attack_mode, required_info = self.show_create_screen()
                 job = self.job_handler.create_job(_hash, hash_type, attack_mode, required_info)
                 self.job_handler.send_job(job)
             elif input_as_list[0] == "cancel":
                 job_id = int(input("Job ID: "))
-                self.job_handler.cancel_job(job_id)
+                try:
+                    self.job_handler.cancel_job(job_id)
+                except:
+                    print("Invalid Job ID")
         
 
     def print_welcome(self):
@@ -65,12 +72,9 @@ class ClientController:
             print("Status: " + job.status)
             print("Progress: " + str((job.progress[0] / job.progress[1])) + "%")
             print("---------------------------------")
-
         except:
             raise Exception("Invalid Job ID")
 
-            
-       
     def show_create_screen(self):
         user_input = ""
         _hash = ""
@@ -78,6 +82,8 @@ class ClientController:
         attack_mode = ""
         mask = ""
         dictionary = ""
+        output_file = ""
+        hash_file_location = ""
         
         while user_input != "back" and user_input != "exit":
             user_input = input("\nCloudCrack > Create > ")
@@ -90,6 +96,8 @@ class ClientController:
                 print("Attack Mode: " + attack_mode)
                 print("Mask: " + mask)
                 print("Dictionary: " + dictionary)
+                print("Output File (Optional): " + output_file)
+                print("Hash File Location (Optional): " + hash_file_location)
             if input_as_list[0].lower() == "set":
                 if input_as_list[1].lower() == "hash":
                     _hash = input_as_list[2].strip()
@@ -102,12 +110,28 @@ class ClientController:
                 elif input_as_list[1].lower() == "dictionary":
                     dictionary = input_as_list[2].strip()
             if input_as_list[0].lower() in ["run", "start", "create"]:
-                if mask != None:
-                    required_info = mask
-                elif dictionary != None:
+
+                if dictionary == None and attack_mode == "0":
+                    print("You must provide a dictionary for attack mode 0")
+                    continue
+                if mask == None and attack_mode == "3":
+                    print("You must provide a mask for attack mode 3")
+                    continue
+                if hash == None & hash_file_location == None:
+                    print("You must provide a hash OR hash file location")
+                    continue
+                if hash_type == None:
+                    print("You must provide a hash type")
+                    continue
+                if attack_mode == None:
+                    print("You must provide an attack mode")
+                    continue
+                
+                if dictionary != None:
                     required_info = dictionary
-                else:
-                    raise Exception("No mask or dictionary provided")
+                elif mask != None:
+                    required_info = mask
+
                 self.job_handler.create_job(_hash, hash_type, attack_mode, required_info)
             if input_as_list == "clear":
                 _hash = ""
@@ -115,7 +139,10 @@ class ClientController:
                 attack_mode = ""
                 mask = ""
                 dictionary = ""
+                output_file = ""
+                hash_file_location = ""
         return
+    
         
 
         
