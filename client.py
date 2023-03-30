@@ -4,7 +4,7 @@ class ClientController:
         self.job_handler = job_handler
 
 
-    def wait_for_user_input(self):
+    def run(self):
         self.print_welcome()
         while True:
             user_input = input("\nCloudCrack > ")
@@ -29,9 +29,7 @@ class ClientController:
                     except:
                         print("Invalid Job ID")
             elif input_as_list[0] == "create":
-                _hash, hash_type, attack_mode, required_info = self.show_create_screen()
-                job = self.job_handler.create_job(_hash, hash_type, attack_mode, required_info)
-                self.job_handler.send_job(job)
+                self.create_screen()
             elif input_as_list[0] == "cancel":
                 job_id = int(input("Job ID: "))
                 try:
@@ -75,7 +73,7 @@ class ClientController:
         except:
             raise Exception("Invalid Job ID")
 
-    def show_create_screen(self):
+    def create_screen(self):
         user_input = ""
         _hash = ""
         hash_type = ""
@@ -98,6 +96,7 @@ class ClientController:
                 print("Dictionary: " + dictionary)
                 print("Output File (Optional): " + output_file)
                 print("Hash File Location (Optional): " + hash_file_location)
+
             if input_as_list[0].lower() == "set":
                 if input_as_list[1].lower() == "hash":
                     _hash = input_as_list[2].strip()
@@ -109,30 +108,54 @@ class ClientController:
                     mask = input_as_list[2].strip()
                 elif input_as_list[1].lower() == "dictionary":
                     dictionary = input_as_list[2].strip()
-            if input_as_list[0].lower() in ["run", "start", "create"]:
 
-                if dictionary == None and attack_mode == "0":
+            if input_as_list[0].lower() in ["run", "start", "create"]:
+                if dictionary == "" and attack_mode == "0":
                     print("You must provide a dictionary for attack mode 0")
                     continue
-                if mask == None and attack_mode == "3":
+                if mask == "" and attack_mode == "3":
                     print("You must provide a mask for attack mode 3")
                     continue
-                if hash == None & hash_file_location == None:
+                if hash == "" and hash_file_location == "":
                     print("You must provide a hash OR hash file location")
                     continue
-                if hash_type == None:
+                if hash_type == "":
                     print("You must provide a hash type")
                     continue
-                if attack_mode == None:
+                if attack_mode == "":
                     print("You must provide an attack mode")
                     continue
                 
-                if dictionary != None:
+                if dictionary != "":
                     required_info = dictionary
-                elif mask != None:
+                elif mask != "":
                     required_info = mask
+                
+                if hash_file_location != "":
+                    try:
+                        with open(hash_file_location, "r") as file:
+                            pass
+                    except:
+                        print("Failed to open hash file. Please check the file location and try again")
+                        continue
 
-                self.job_handler.create_job(_hash, hash_type, attack_mode, required_info)
+                    with open(hash_file_location, "r") as file:
+                        hashes = file.readlines()
+                    for _hash in hashes:
+                        _hash = _hash.strip(" ")
+                        _hash = _hash.strip("\n")
+                        try: 
+                            jb = self.job_handler.create_job(_hash, hash_type, attack_mode, required_info)
+                            self.job_handler.send_job(jb)
+                        except:
+                            print("Failed to create job") # DEBUG
+                            continue
+                else:
+                    jb = self.job_handler.create_job(_hash, hash_type, attack_mode, required_info)
+                    self.job_handler.send_job(jb)
+
+                
+
             if input_as_list == "clear":
                 _hash = ""
                 hash_type = ""
@@ -141,15 +164,8 @@ class ClientController:
                 dictionary = ""
                 output_file = ""
                 hash_file_location = ""
+
         return
-    
-        
-
-        
-
-    
-controller = ClientController(None)
-controller.wait_for_user_input()
     
         
 
