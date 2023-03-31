@@ -68,12 +68,18 @@ class JobHandler:
         self.control_queue.send_message(MessageBody=Command(job.job_id, REQUEST.STATUS).to_json())
 
     def check_for_response(self):
-        messages = self.inbound_queue.receive_messages(MaxNumberOfMessages=1)
-        if len(messages) > 0:
-            messages[0].delete()
-            return messages[0]
-        else:
-            return None
+        inboundMessages = self.inbound_queue.receive_messages(MaxNumberOfMessages=10)
+
+        if len(inboundMessages) > 0:
+            for message in inboundMessages:
+                try:
+                    job = self.load_from_json(message.body)
+                    self.job_log[job.job_id] = job
+                except Exception as e:
+                    status = json.loads(message.body)
+                    self.job_log[status["job_id"]].progress[0] = status["current"]
+                    self.job_log[status["job_id"]].progress[1] = status["total"]
+                message.delete()
         
     def from_json(self, json_str):
         return json.loads(json_str)
