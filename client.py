@@ -1,3 +1,4 @@
+from job_handler import STATUS
 class ClientController:
 
     def __init__(self, job_handler):
@@ -7,6 +8,7 @@ class ClientController:
     def run(self):
         self.print_welcome()
         while True:
+            self.job_handler.check_for_response()
             user_input = input("\nCloudCrack > ")
             user_input.strip()
             input_as_list = user_input.split(" ")
@@ -30,9 +32,9 @@ class ClientController:
                         print("Invalid Job ID")
             elif input_as_list[0] == "create":
                 self.create_screen()
-            elif input_as_list[0] == "cancel":
+            elif input_as_list[0] == "cancel": ##BROKLEN. Crashing on reciever end
                 job_id = int(input("Job ID: "))
-                try:
+                try: 
                     self.job_handler.cancel_job(job_id)
                 except:
                     print("Invalid Job ID")
@@ -52,13 +54,16 @@ class ClientController:
 
     
     def show_current_jobs(self):
-        print("Current Jobs:\ns")
+        print("Current Jobs:")
         for job in self.job_handler.job_log.values():
             print("\n---------------------------------")
             print("Job ID: " + str(job.job_id))
-            print("Hash: " + job._hash)
-            print("Status: " + job.status)
-            print("Progress: " + str((job.progress[0] / job.progress[1])) + "%")
+            print("Hash: " + job.hash)
+            print("Status: " + job.job_status.name)
+            if job.job_status == STATUS.RUNNING:
+                print("Progress: " + str((job.progress[0] / job.progress[1])) + "%")
+            elif job.job_status == STATUS.COMPLETED:
+                print("Result: " + job.required_info)
             print("---------------------------------")
 
     def show_current_job(self, job_id):
@@ -66,8 +71,8 @@ class ClientController:
             job = self.job_handler.job_log[job_id]
             print("\n---------------------------------")
             print("Job ID: " + str(job.job_id))
-            print("Hash: " + job._hash)
-            print("Status: " + job.status)
+            print("Hash: " + job.hash)
+            print("Status: " + job.job_status.name)
             print("Progress: " + str((job.progress[0] / job.progress[1])) + "%")
             print("---------------------------------")
         except:
