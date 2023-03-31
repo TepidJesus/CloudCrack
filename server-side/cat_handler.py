@@ -74,6 +74,7 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
                                             '-w4', "--status", "--quiet", "--status-json", _bg=True, 
                                             _out=self.process_output, _ok_code=[0,1])
                     self.process = job_as_command
+                    #job_as_command.wait()
                     
                                             
                 elif job.attack_mode == "3":
@@ -81,6 +82,7 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
                                             '-w4', "--status", "--quiet", "--status-json", _bg=True, 
                                             _out=self.process_output, _ok_code=[0,1])
                     self.process = job_as_command
+                    #job_as_command.wait()
 
                 else:
                     print("Invalid attack mode")
@@ -98,25 +100,22 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
         def process_output(self, line):
             try:
                 line_json = json.loads(line)
-                # print(f"Current Status: {line_json['status']}") 
-                # print(f"Progress: {int(line_json['progress'][0]) / int(line_json['progress'][1]) * 100:.2f}%\n")
-                self.report_progress( int(line_json['progress'][0]) / int(line_json['progress'][1]) * 100)
-                
                 if line_json['status'] == 5:
                     self.job_complete(self.current_job, "EXHAUSTED")
                     return True
                 
-            except:
+                self.report_progress(int(line_json['progress'][0]), int(line_json['progress'][1]))
+                 
+            except Exception as e:
                 print("Job completed")
-                self.job_complete(self.current_job, line.split(":")[1])
+                self.job_complete(self.current_job, line.split(":")[1].strip('\n'))
                 return True
 
             
 
-        def report_progress(self, progress):
-            print(f"Reporting progress: {progress:.2f}%")
-            self.outbound_queue.send_message(MessageBody=json.dumps({"job_id": self.current_job.job_id, "progress": progress}), 
-                                                                    MessageGroupId="Status", MessageDeduplicationId=str(self.current_job.job_id)+ str(progress))
+        def report_progress(self, current, total):
+            self.outbound_queue.send_message(MessageBody=json.dumps({"job_id": self.current_job.job_id, "current": current, "total": total}), 
+                                                                    MessageGroupId="Status", MessageDeduplicationId=str(self.current_job.job_id)+ str(current))
  
         def job_complete(self, job, result):
             if result == "EXHAUSTED":
