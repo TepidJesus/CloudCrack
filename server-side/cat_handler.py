@@ -22,10 +22,10 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
         def create_job(self, _hash, hash_type, attack_mode, required_info):
             raise NotImplementedError("This method is not implemented for HashcatHandler")
         
-        def cancel_job(self, job):
+        def cancel_job(self, job_id):
             if self.current_job is None:
                 return
-            elif self.current_job.job_id != job.job_id:
+            elif self.current_job.job_id != job_id:
                 return
             
             self.current_job.job_status = STATUS.CANCELLED
@@ -33,13 +33,14 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
                 self.process.kill()
             except sh.SignalException_SIGKILL: # When job is cancelled
                 self.job_complete(self.current_job, "CANCELLED")
-                
+            
+            job_tmp = self.current_job
             self.current_job = None
             self.process = None
 
             print("Job cancelled")
 
-            self.return_job(job)
+            self.return_job(job_tmp)
 
         def get_job_status(self, job):
             return self.current_job.job_status

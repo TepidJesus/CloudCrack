@@ -15,7 +15,7 @@ class ClientController:
 
             if input_as_list[0] == "help":
                 self.print_help()
-            elif input_as_list[0] == "exit":
+            elif input_as_list[0] in ["exit", "close", "quit"]:
                 self.job_handler.cancel_all_jobs()
                 break
             elif input_as_list[0] == "show":
@@ -32,7 +32,7 @@ class ClientController:
                         print("Invalid Job ID")
             elif input_as_list[0] == "create":
                 self.create_screen()
-            elif input_as_list[0] == "cancel": ##BROKLEN. Crashing on reciever end
+            elif input_as_list[0] == "cancel":
                 job_id = int(input("Job ID: "))
                 try: 
                     self.job_handler.cancel_job(job_id)
