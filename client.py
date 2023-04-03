@@ -2,7 +2,6 @@ from job_handler import STATUS
 
 ## Problems:
 # - No status response after reciever crashes
-# - Client not stopping user sending job with missing hash or wrong mask
 
 
 class ClientController:
@@ -39,11 +38,18 @@ class ClientController:
             elif input_as_list[0] == "create":
                 self.create_screen()
             elif input_as_list[0] == "cancel":
-                job_id = int(input("Job ID: "))
-                try: 
-                    self.job_handler.cancel_job(job_id)
-                except:
-                    print("Invalid Job ID")
+                if (len(input_as_list) == 2):
+                    try:
+                        job_id = int(input_as_list[1])
+                        self.job_handler.cancel_job(job_id)
+                    except:
+                        print("Invalid Job ID")
+                else:
+                    job_id = int(input("Job ID: "))
+                    try: 
+                        self.job_handler.cancel_job(job_id)
+                    except:
+                        print("Invalid Job ID")
         
 
     def print_welcome(self):
@@ -54,9 +60,9 @@ class ClientController:
     def print_help(self):
         print("\nhelp - print this message")
         print("exit - exit the program")
-        print("list - list all jobs")
+        print("show <all/job_id) - list all jobs or show a specific job")
         print("create - create a new job")
-        print("cancel - cancel a job")
+        print("cancel <job_id> - cancel a job")
 
     
     def show_current_jobs(self):
@@ -130,7 +136,7 @@ class ClientController:
                 if mask == "" and attack_mode == "3":
                     print("You must provide a mask for attack mode 3")
                     continue
-                if hash == "" and hash_file_location == "":
+                if _hash == "" and hash_file_location == "":
                     print("You must provide a hash OR hash file location")
                     continue
                 if hash_type == "":
@@ -138,6 +144,9 @@ class ClientController:
                     continue
                 if attack_mode == "":
                     print("You must provide an attack mode")
+                    continue
+                if not self.valid_mask(mask):
+                    print("Invalid mask. See the HashCat wiki for help")
                     continue
                 
                 if dictionary != "":
@@ -181,6 +190,25 @@ class ClientController:
 
         return
     
+    def valid_mask(mask):
+        if mask == None:
+            return False
+        
+        if "?" not in mask:
+            return False
+        
+        if len(mask) <= 1:
+            return False
+        
+        for i in range(len(mask)):
+            char = mask[i]
+            if char != "?" and char != "d" and char != "l" and char != "u" and char != "s" and char != "a" and char != "h" and char != "H" and char != "b":
+                return False
+            if char == "?" and i % 2 != 0:
+                return False
+            if char != "?" and i % 2 == 0:
+                return False
+        return True
         
 
 
