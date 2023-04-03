@@ -14,14 +14,14 @@ class STATUS(IntEnum):
 
 class Job:
 
-    def __init__(self, job_id, _hash, hash_type, status, attack_mode, required_info): ## Need to add ability to set job status when creating job. Adjust elsewhere accordingly
+    def __init__(self, job_id, _hash, hash_type, status, attack_mode, required_info):
         self.job_id = job_id
         self.hash = _hash
         self.hash_type = hash_type
         self.job_status = status
         self.attack_mode = attack_mode
         self.required_info = required_info
-        self.progress = [0,0] # NEED TO INTEGRATE THIS INTO THE REPORTING SOMEHOW
+        self.progress = [0,0]
 
     def __str__(self):
         return f"Job ID: {self.job_id} | Hash: {self.hash} | Hash Type: {self.hash_type} | Job Status: {self.job_status}"
@@ -79,6 +79,7 @@ class JobHandler:
                     status = json.loads(message.body)
                     self.job_log[status["job_id"]].progress[0] = status["current"]
                     self.job_log[status["job_id"]].progress[1] = status["total"]
+                    self.job_log[status["job_id"]].job_status = STATUS.RUNNING
                 message.delete()
         
     def from_json(self, json_str):
