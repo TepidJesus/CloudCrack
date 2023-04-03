@@ -1,4 +1,10 @@
 from job_handler import STATUS
+
+## Problems:
+# - No status response after reciever crashes
+# - Client not stopping user sending job with missing hash or wrong mask
+
+
 class ClientController:
 
     def __init__(self, job_handler):
@@ -61,7 +67,7 @@ class ClientController:
             print("Hash: " + job.hash)
             print("Status: " + job.job_status.name)
             if job.job_status == STATUS.RUNNING:
-                print("Progress: " + str((job.progress[0] / job.progress[1])) + "%")
+                print("Progress: " + str(round(job.progress[0] / job.progress[1], 2) * 100) + "%")
             elif job.job_status == STATUS.COMPLETED:
                 print("Result: " + job.required_info)
             print("---------------------------------")
@@ -73,7 +79,10 @@ class ClientController:
             print("Job ID: " + str(job.job_id))
             print("Hash: " + job.hash)
             print("Status: " + job.job_status.name)
-            print("Progress: " + str((job.progress[0] / job.progress[1])) + "%")
+            if job.job_status == STATUS.RUNNING:
+                print("Progress: " + str(round(job.progress[0] / job.progress[1], 2) * 100) + "%")
+            elif job.job_status == STATUS.COMPLETED:
+                print("Result: " + job.required_info)
             print("---------------------------------")
         except:
             raise Exception("Invalid Job ID")
