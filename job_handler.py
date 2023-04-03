@@ -8,7 +8,7 @@ class STATUS(IntEnum):
     COMPLETED = 3
     FAILED = 4
     CANCELLED = 5
-    SENT = 6
+    QUEUED = 6
     PENDING = 7
     EXHAUSTED = 8
 
@@ -31,17 +31,18 @@ class Job:
     
 class JobHandler:
 
-    def __init__(self, outbound_queue, control_queue, inbound_queue):
+    def __init__(self, outbound_queue, control_queue, inbound_queue, s3_client):
         self.outbound_queue = outbound_queue
         self.control_queue = control_queue
         self.inbound_queue = inbound_queue
+        self.s3_client = s3_client
 
         self.job_id = 1
         self.job_log = {}
 
     def send_job(self, job):
-        job.job_status = STATUS.SENT
-        self.outbound_queue.send_message(MessageBody=job.to_json(), MessageGroupId="Job", MessageDeduplicationId=str(job.job_id))
+        job.job_status = STATUS.QUEUED
+        self.outbound_queue.send_message(MessageBody=job.to_json(), MessageGroupId="Job")
 
     def get_new_job_id(self):
         num = self.job_id
@@ -54,8 +55,8 @@ class JobHandler:
         return job
     
     def cancel_job(self, job_id):
-        self.job_log[job_id].job_status = STATUS.CANCELLED # FIX THIS !!!!!
-        self.control_queue.send_message(MessageBody=Command(job_id, REQUEST.CANCEL).to_json(), MessageGroupId="Command", MessageDeduplicationId=str(job_id) + "CANCEL")
+        self.job_log[job_id].job_status = STATUS.CANCELLED
+        self.control_queue.send_message(MessageBody=Command(job_id, REQUEST.CANCEL).to_json(), MessageGroupId="Command")
 
     def cancel_all_jobs(self):
         for job in self.job_log:
@@ -102,7 +103,7 @@ class JobHandler:
         elif status == 5:
             return STATUS.CANCELLED
         elif status == 6:
-            return STATUS.SENT
+            return STATUS.QUEUED
         elif status == 7:
             return STATUS.PENDING
         elif status == 8:

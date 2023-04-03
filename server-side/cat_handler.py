@@ -13,11 +13,10 @@ import os
 class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler class and split mananging jobs and running jobs into two classes
     
         def __init__(self, outbound_queue, control_queue, inbound_queue, s3_client):
-            super().__init__(outbound_queue, control_queue, inbound_queue)
+            super().__init__(outbound_queue, control_queue, inbound_queue, s3_client)
             self.hashcat_status = 0
             self.current_job = None
             self.process = None
-            self.s3_client = s3_client
         
         def create_job(self, _hash, hash_type, attack_mode, required_info):
             raise NotImplementedError("This method is not implemented for HashcatHandler")
@@ -116,7 +115,7 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
 
         def report_progress(self, current, total):
             self.outbound_queue.send_message(MessageBody=json.dumps({"job_id": self.current_job.job_id, "current": current, "total": total}), 
-                                                                    MessageGroupId="Status", MessageDeduplicationId=str(self.current_job.job_id)+ str(current))
+                                                                    MessageGroupId="Status")
  
         def job_complete(self, job, result):
             if result == "EXHAUSTED":
@@ -138,4 +137,4 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
 
         def return_job(self, job):
             print("Returning job")
-            self.outbound_queue.send_message(MessageBody=job.to_json(), MessageGroupId="Job", MessageDeduplicationId=str(job.job_id) + str(job.job_status))
+            self.outbound_queue.send_message(MessageBody=job.to_json(), MessageGroupId="Job")
