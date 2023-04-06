@@ -13,8 +13,8 @@ class ClientController:
     def run(self):
         self.print_welcome()
         while True:
-            self.job_handler.check_for_response()
             user_input = input("\nCloudCrack > ")
+            self.job_handler.check_for_response()
             user_input.strip()
             input_as_list = user_input.split(" ")
 
@@ -26,7 +26,7 @@ class ClientController:
             elif input_as_list[0] == "show":
                 if len(input_as_list) < 2:
                     print("Use 'show all' to show all jobs or 'show <job_id>' to show a specific job")
-                    continue
+                    continue 
                 if input_as_list[1] == "all":
                     self.show_current_jobs()
                 else:
@@ -120,14 +120,27 @@ class ClientController:
             if input_as_list[0].lower() == "set":
                 if input_as_list[1].lower() == "hash":
                     _hash = input_as_list[2].strip()
-                elif input_as_list[1].lower() == "hash_type":
+                elif input_as_list[1].lower() == "type":
                     hash_type = input_as_list[2].strip()
-                elif input_as_list[1].lower() == "attack_mode":
-                    attack_mode = input_as_list[2].strip()
+                elif input_as_list[1].lower() == "mode":
+                    if (input_as_list[2].lower() not in ["0", "3", "dictionary", "mask"]):
+                        print("Invalid attack mode")
+                        continue
+                    else:
+                        if input_as_list[2].lower() == "dictionary":
+                            attack_mode = "0"
+                        elif input_as_list[2].lower() == "mask":
+                            attack_mode = "3"
+                        else:
+                            attack_mode = input_as_list[2].strip()
                 elif input_as_list[1].lower() == "mask":
                     mask = input_as_list[2].strip()
                 elif input_as_list[1].lower() == "dictionary":
                     dictionary = input_as_list[2].strip()
+                elif input_as_list[1].lower() == "output":
+                    output_file = input_as_list[2].strip()
+                elif input_as_list[1].lower() == "hashes":
+                    hash_file_location = input_as_list[2].strip()
 
             if input_as_list[0].lower() in ["run", "start", "create"]:
                 if dictionary == "" and attack_mode == "0":
@@ -179,7 +192,7 @@ class ClientController:
 
                 
 
-            if input_as_list == "clear":
+            if input_as_list[0] == "clear":
                 _hash = ""
                 hash_type = ""
                 attack_mode = ""
@@ -190,7 +203,7 @@ class ClientController:
 
         return
     
-    def valid_mask(mask):
+    def valid_mask(self, mask):
         if mask == None:
             return False
         
