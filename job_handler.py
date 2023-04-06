@@ -1,4 +1,5 @@
 import json
+import uuid
 from enum import Enum, IntEnum
 ### HashCat Command Format: hashcat -a <attack_mode> -m <hash_type> <hash> <wordlist/mask/length> -w 4
 
@@ -14,7 +15,7 @@ class STATUS(IntEnum):
 
 class Job:
 
-    def __init__(self, job_id, _hash, hash_type, status, attack_mode, required_info):
+    def __init__(self, job_id, _hash, hash_type, status, attack_mode, required_info, result_file=None):
         self.job_id = job_id
         self.hash = _hash
         self.hash_type = hash_type
@@ -22,6 +23,7 @@ class Job:
         self.attack_mode = attack_mode
         self.required_info = required_info
         self.progress = [0,0]
+        self.result_file = result_file
 
     def __str__(self):
         return f"Job ID: {self.job_id} | Hash: {self.hash} | Hash Type: {self.hash_type} | Job Status: {self.job_status}"
@@ -42,6 +44,13 @@ class JobHandler:
 
     def send_job(self, job):
         job.job_status = STATUS.QUEUED
+        if job.required_info is not None and job.attack_mode == 0:
+            response = self.create_bucket(job.required_info)
+            if response == None:
+                job.job_status = STATUS.FAILED
+                return
+            else:
+                job.required_info = response
         self.outbound_queue.send_message(MessageBody=job.to_json(), MessageGroupId="Job")
 
     def get_new_job_id(self):
@@ -76,6 +85,8 @@ class JobHandler:
                 try:
                     job = self.load_from_json(message.body)
                     self.job_log[job.job_id] = job
+                    if job.job_status == STATUS.COMPLETED and job.result_file is not None:
+                        self.update_result_file(job)
                 except Exception as e:
                     status = json.loads(message.body)
                     self.job_log[status["job_id"]].progress[0] = status["current"]
@@ -90,6 +101,25 @@ class JobHandler:
         json_string = self.from_json(json_string)
         job = Job(int(json_string["job_id"]), json_string["hash"], json_string["hash_type"], self.convert_status(json_string["job_status"]), json_string["attack_mode"], json_string["required_info"])
         return job
+    
+    def update_result_file(self, job):
+        with open(job.result_file, "w") as f:
+            strng = f"{job.hash} : {job.required_info}"
+            f.write(strng)
+
+    def create_bucket(self, wordlist_file):
+        bucket_name = ''.join(["list_bucket", str(uuid.uuid4())])
+        wordlist_bucket = self.s3_client.create_bucket(
+             Bucket=bucket_name,
+             CreateBucketConfiguration={
+             'LocationConstraint': "us-east-2"})
+        try:
+            response = self.s3_client.upload_file(wordlist_file, bucket_name, "UsersWordlist")
+            return bucket_name
+        except Exception as e:
+            print("Failed to upload wordlist to S3. Check the file path and try again.")
+            return None
+        
     
     def convert_status(self, status):
         if status == 1:
