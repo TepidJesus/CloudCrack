@@ -77,6 +77,12 @@ class JobHandler:
         return self.job_log[job_id][0]
     
     def cancel_job(self, job_id):
+        if job_id not in self.job_log:
+            return
+        
+        if self.job_log[job_id][0].job_status == STATUS.QUEUED:
+            self.sqs_client.delete_message(QueueUrl=self.outbound_queue["QueueUrl"], ReceiptHandle=self.job_log[job_id][1])
+
         self.job_log[job_id].job_status[0] = STATUS.CANCELLED
         self.control_queue.send_message(MessageBody=Command(job_id, REQUEST.CANCEL).to_json(), MessageGroupId="Command")
 
