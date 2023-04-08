@@ -34,12 +34,21 @@ class Job:
     
 class JobHandler:
 
-    def __init__(self, outbound_queue, control_queue, inbound_queue, s3_client):
-        self.outbound_queue = outbound_queue
-        self.control_queue = control_queue
-        self.inbound_queue = inbound_queue
-        self.s3_client = s3_client
-
+    def __init__(self, session):
+        self.s3_client = session.client('s3')
+        self.sqs_client = session.resource('sqs')
+        self.outbound_queue = self.sqs_client.create_queue(QueueName='deliveryQueue.fifo', 
+                                               Attributes={'DelaySeconds': '1', 
+                                                           'FifoQueue': 'true', 
+                                                           'ContentBasedDeduplication': 'true'})
+        self.control_queue = self.sqs_client.create_queue(QueueName='controlQueue.fifo', 
+                                              Attributes={'DelaySeconds': '1', 
+                                                          'FifoQueue': 'true', 
+                                                          'ContentBasedDeduplication': 'true'})
+        self.inbound_queue = self.sqs_client.create_queue(QueueName='returnQueue.fifo', 
+                                              Attributes={'DelaySeconds': '1', 
+                                                          'FifoQueue': 'true', 
+                                                          'ContentBasedDeduplication': 'true'})
         self.job_id = 1
         self.job_log = {}
 
