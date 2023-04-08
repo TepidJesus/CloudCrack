@@ -86,9 +86,6 @@ class JobHandler:
     
     def get_local_job_status(self, job):
         return self.job_log[job.job_id][0].job_status
-    
-    def request_job_status(self, job):
-        self.control_queue.send_message(MessageBody=Command(job.job_id, REQUEST.STATUS).to_json())
 
     def check_for_response(self):
         inboundMessages = self.inbound_queue.receive_messages(MaxNumberOfMessages=10)
