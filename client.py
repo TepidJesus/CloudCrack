@@ -2,6 +2,7 @@ from job_handler import STATUS
 
 ## Problems:
 # - No status response after reciever crashes
+# - Need to be able to cancel job that isn't running yet
 
 
 class ClientController:
@@ -39,6 +40,8 @@ class ClientController:
                 self.create_screen()
             elif input_as_list[0] == "cancel":
                 if (len(input_as_list) == 2):
+                    if input_as_list[1] == "all":
+                        self.job_handler.cancel_all_jobs()
                     try:
                         job_id = int(input_as_list[1])
                         self.job_handler.cancel_job(job_id)
@@ -67,7 +70,8 @@ class ClientController:
     
     def show_current_jobs(self):
         print("Current Jobs:")
-        for job in self.job_handler.job_log.values():
+        for job_id in self.job_handler.job_log.keys():
+            job = self.job_handler.get_job(job_id)
             print("\n---------------------------------")
             print("Job ID: " + str(job.job_id))
             print("Hash: " + job.hash)
@@ -80,7 +84,7 @@ class ClientController:
 
     def show_current_job(self, job_id):
         try:
-            job = self.job_handler.job_log[job_id]
+            job = self.job_handler.get_job(job_id)
             print("\n---------------------------------")
             print("Job ID: " + str(job.job_id))
             print("Hash: " + job.hash)

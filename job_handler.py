@@ -1,4 +1,5 @@
 import json
+import boto3
 import uuid
 from enum import Enum, IntEnum
 ### HashCat Command Format: hashcat -a <attack_mode> -m <hash_type> <hash> <wordlist/mask/length> -w 4
@@ -51,7 +52,8 @@ class JobHandler:
                 return
             else:
                 job.required_info = response
-        self.outbound_queue.send_message(MessageBody=job.to_json(), MessageGroupId="Job")
+        response = self.outbound_queue.send_message(MessageBody=job.to_json(), MessageGroupId="Job")
+        self.job_log[job.job_id] = (job, response['ReceiptHandle']) 
 
     def get_new_job_id(self):
         num = self.job_id
@@ -60,11 +62,13 @@ class JobHandler:
     
     def create_job(self, _hash, hash_type, attack_mode, required_info):
         job = Job(self.get_new_job_id(), _hash, hash_type, STATUS.CREATED, attack_mode, required_info)
-        self.job_log[job.job_id] = job
         return job
     
+    def get_job(self, job_id):
+        return self.job_log[job_id][0]
+    
     def cancel_job(self, job_id):
-        self.job_log[job_id].job_status = STATUS.CANCELLED
+        self.job_log[job_id].job_status[0] = STATUS.CANCELLED
         self.control_queue.send_message(MessageBody=Command(job_id, REQUEST.CANCEL).to_json(), MessageGroupId="Command")
 
     def cancel_all_jobs(self):
@@ -72,7 +76,7 @@ class JobHandler:
             self.cancel_job(job)
     
     def get_local_job_status(self, job):
-        return self.job_log[job.job_id].job_status
+        return self.job_log[job.job_id][0].job_status
     
     def request_job_status(self, job):
         self.control_queue.send_message(MessageBody=Command(job.job_id, REQUEST.STATUS).to_json())
@@ -84,14 +88,14 @@ class JobHandler:
             for message in inboundMessages:
                 try:
                     job = self.load_from_json(message.body)
-                    self.job_log[job.job_id] = job
+                    self.job_log[job.job_id][0] = job
                     if job.job_status == STATUS.COMPLETED and job.result_file is not None:
                         self.update_result_file(job)
                 except Exception as e:
                     status = json.loads(message.body)
-                    self.job_log[status["job_id"]].progress[0] = status["current"]
-                    self.job_log[status["job_id"]].progress[1] = status["total"]
-                    self.job_log[status["job_id"]].job_status = STATUS.RUNNING
+                    self.job_log[status["job_id"]][0].progress[0] = status["current"]
+                    self.job_log[status["job_id"]][0].progress[1] = status["total"]
+                    self.job_log[status["job_id"]][0].job_status = STATUS.RUNNING
                 message.delete()
         
     def from_json(self, json_str):
