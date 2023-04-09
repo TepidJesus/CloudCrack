@@ -1,18 +1,27 @@
 from job_handler import STATUS
+import boto3
+from botocore.exceptions import ClientError
+import json
 
 ## Problems:
 # - No status response after reciever crashes
-# - Need to be able to cancel job that isn't running yet
 
+## TODO: Make an AWS handler class that handles all AWS interactions to abstract away the boto3 API
+## TODO: Finish settings menu and add a way to change settings and save them to the config file
+## TODO: Add a way to check vCPU limit
+## TODO: Add muilti-instance support (Need a way to quantify the number of instances to the user)
 
 class ClientController:
 
     def __init__(self, job_handler):
         self.job_handler = job_handler
+        self.config = self.get_config()
 
 
     def run(self):
         self.print_welcome()
+        if not self.dotenv_present():
+            ## TODO: Validate user credentials and find a way to check vCPU limit
         while True:
             user_input = input("\nCloudCrack > ")
             self.job_handler.check_for_response()
@@ -65,6 +74,7 @@ class ClientController:
         print("exit - exit the program")
         print("show <all/job_id) - list all jobs or show a specific job")
         print("create - create a new job")
+        print("options - show CloudCrack settings menu")
         print("cancel <job_id> - cancel a job")
 
     
@@ -226,6 +236,53 @@ class ClientController:
             if char != "?" and i % 2 == 0:
                 return False
         return True
+    
+    def dotenv_present(self):
+        try:
+            with open(".env", "r") as f:
+                dotenv = f.read()
+            return True
+        except:
+            return False
+        
+    def set_credentials(self, aws_access_key_id, aws_secret_access_key):
+        with open(".env", "w") as f:
+            f.write("AWS_ACCESS_KEY_ID=" + aws_access_key_id)
+            f.write("\nAWS_SECRET_ACCESS_KEY=" + aws_secret_access_key)
+        
+    def run_setup(self):
+        print("It looks like this is your first time running this program.")
+        print("Lets get started by setting up your AWS credentials. You can find these instructions for this in the setup guide in the README.md file.")
+
+        while True:
+            aws_access_key_id = input("Enter your AWS Access Key ID: ")
+            aws_secret_access_key = input("Enter your AWS Secret Access Key: ")
+            print("Please wait while I validate your credentials...")
+
+            try:
+                client = boto3.client('ec2', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name='us-east-2')
+                client.run_instances(ImageId=self.config['AWS-Settings']["image_id"], MinCount=1, MaxCount=1, InstanceType='t2.micro', DryRun=True)
+            except ClientError as e:
+                if 'DryRunOperation' not in str(e):
+                    print("Error: Your credentials are invalid. Please make sure you entered them correctly.")
+                    raise e
+                else:
+                    print("Success! Your credentials are valid.")
+                    self.set_credentials(aws_access_key_id, aws_secret_access_key)
+                    print("You're all set! Have fun, but remember to be safe and to only use this tool for legitimate purposes.")
+                    break
+            except:
+                print("Sorry, there was an error validating your credentials. Check you have enabled the correct permissions.")
+
+    def get_config(self):
+        try:
+            with open("config.json", "r") as f:
+                config = json.load(f)
+        except:
+            print("Error: The config file does not exist. Did you delete it? Go get a new one from the repository, it's kind of important.")
+            exit()
+        return config
+
         
 
 
