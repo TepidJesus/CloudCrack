@@ -1,7 +1,10 @@
-from job_handler import STATUS
+from job_handler import JobHandler, STATUS
 import boto3
 from botocore.exceptions import ClientError
 import json
+import dotenv
+import os
+import sys
 
 ## Problems:
 # - No status response after reciever crashes
@@ -9,19 +12,22 @@ import json
 ## TODO: Make an AWS handler class that handles all AWS interactions to abstract away the boto3 API
 ## TODO: Finish settings menu and add a way to change settings and save them to the config file
 ## TODO: Add a way to check vCPU limit
-## TODO: Add muilti-instance support (Need a way to quantify the number of instances to the user)
+## TODO: Add multi-instance support (Need a way to quantify the number of instances to the user)
 
 class ClientController:
 
-    def __init__(self, job_handler):
-        self.job_handler = job_handler
+    def __init__(self):
+        if not self.dotenv_present():
+            self.run_setup()
+        self.session = self.get_session()
+        print(self.get_vCPU_count(self.session))
+        self.job_handler = JobHandler(self.session)
         self.config = self.get_config()
+        
 
 
     def run(self):
         self.print_welcome()
-        if not self.dotenv_present():
-            ## TODO: Validate user credentials and find a way to check vCPU limit
         while True:
             user_input = input("\nCloudCrack > ")
             self.job_handler.check_for_response()
@@ -282,8 +288,18 @@ class ClientController:
             print("Error: The config file does not exist. Did you delete it? Go get a new one from the repository, it's kind of important.")
             exit()
         return config
-
+    
+    def get_session(self):
+        dotenv.load_dotenv()
+        aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+        aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+        session = boto3.Session(aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name='us-east-2')
+        return session
         
+    def get_vCPU_count(self, session):
+        quota_client = session.client('service-quotas')
+        response = quota_client.get_service_quota(ServiceCode='ec2', QuotaCode='L-417A185B')
+        return int(response['Quota']['Value'])
 
 
 
