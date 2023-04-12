@@ -280,7 +280,7 @@ class ClientController:
     
     def vcpu_limit_message(self, limit):
         print("It looks like your AWS account has a P-Instance vCPU limit of " + str(limit) + ".")
-        print("To use CloudCrack, you need to increase this limit to at least 4. (>8 recommended))")
+        print("To use CloudCrack, you need to increase this limit to at least 4. (>8 recommended)")
         print("You can apply for a limit increase here: https://console.aws.amazon.com/servicequotas/home?region=us-east-2#!/services/ec2/quotas/L-417A185B")
 
 
@@ -294,6 +294,8 @@ class AwsController:
             else:
                 print("Error: Failed to connect to AWS. Please check your credentials and try again.")
                 exit()
+
+            self.effective_vCPU_limit = self.get_effective_vCPU_limit() * self.config["AWS-Settings"]["usage_limit"]
     
     def test_connection(self, aws_access_key_id, aws_secret_access_key):
         try:
@@ -335,3 +337,18 @@ class AwsController:
         ec2 = self.session.resource('ec2')
         instance = ec2.create_instances(ImageId=image_id, MinCount=1, MaxCount=1, InstanceType=instance_type)
         return instance
+    
+    def get_recomended_instance_type(self):
+        vCPU_limit = self.get_vCPU_limit()
+        if vCPU_limit >= 96:
+            return "p4d.24xlarge"
+        elif vCPU_limit >= 64:
+            return "p3.16xlarge"
+        elif vCPU_limit >= 32:
+            return "p3.8xlarge"
+        elif vCPU_limit >= 8:
+            return "p3.2xlarge"
+        elif vCPU_limit >= 4:
+            return "p2.xlarge"
+        else:
+            return "t2.micro"
