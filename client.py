@@ -20,8 +20,10 @@ class ClientController:
         if not self.dotenv_present():
             self.run_setup()
         self.session = self.get_session()
-        print(self.get_vCPU_count(self.session))
-        self.job_handler = JobHandler(self.session)
+        self.vCPU_limit = self.get_vCPU_count(self.session)
+        if self.vCPU_limit < 4:
+            
+        self.job_handler = JobHandler(self.session, self.vCPU_limit)
         self.config = self.get_config()
         
 
@@ -265,21 +267,7 @@ class ClientController:
             aws_secret_access_key = input("Enter your AWS Secret Access Key: ")
             print("Please wait while I validate your credentials...")
 
-            try:
-                client = boto3.client('ec2', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name='us-east-2')
-                client.run_instances(ImageId=self.config['AWS-Settings']["image_id"], MinCount=1, MaxCount=1, InstanceType='t2.micro', DryRun=True)
-            except ClientError as e:
-                if 'DryRunOperation' not in str(e):
-                    print("Error: Your credentials are invalid. Please make sure you entered them correctly.")
-                    raise e
-                else:
-                    print("Success! Your credentials are valid.")
-                    self.set_credentials(aws_access_key_id, aws_secret_access_key)
-                    print("You're all set! Have fun, but remember to be safe and to only use this tool for legitimate purposes.")
-                    break
-            except:
-                print("Sorry, there was an error validating your credentials. Check you have enabled the correct permissions.")
-
+            
     def get_config(self):
         try:
             with open("config.json", "r") as f:
@@ -289,18 +277,61 @@ class ClientController:
             exit()
         return config
     
+    
+    def vcpu_limit_message(self, limit):
+        print("It looks like your AWS account has a P-Instance vCPU limit of " + str(limit) + ".")
+        print("To use CloudCrack, you need to increase this limit to at least 4. (>8 recommended))")
+        print("You can apply for a limit increase here: https://console.aws.amazon.com/servicequotas/home?region=us-east-2#!/services/ec2/quotas/L-417A185B")
+
+
+
+class AwsController:
+    def __init__(self, aws_access_key_id, aws_secret_access_key, config):
+            self.session = None
+            self.config = config
+            if self.test_connection(aws_access_key_id, aws_secret_access_key):
+                self.session = self.get_session()
+            else:
+                print("Error: Failed to connect to AWS. Please check your credentials and try again.")
+                exit()
+    
+    def test_connection(self, aws_access_key_id, aws_secret_access_key):
+        try:
+            client = boto3.client('ec2', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name='us-east-2')
+            client.run_instances(ImageId=self.config['AWS-Settings']["image_id"], MinCount=1, MaxCount=1, InstanceType='t2.micro', DryRun=True)
+        except ClientError as e:
+            if 'DryRunOperation' not in str(e):
+                print("Error: Your credentials are invalid. Please make sure you entered them correctly.")
+                return False
+            else:
+                print("Success! Your credentials are valid.")
+                self.set_credentials(aws_access_key_id, aws_secret_access_key)
+                print("You're all set! Have fun, but remember to be safe and to only use this tool for legitimate purposes.")
+                return True
+        except:
+             print("Sorry, there was an error validating your credentials. Check you have enabled the correct permissions.")
+             return False
+        
     def get_session(self):
         dotenv.load_dotenv()
         aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
         aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
         session = boto3.Session(aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name='us-east-2')
         return session
-        
-    def get_vCPU_count(self, session):
-        quota_client = session.client('service-quotas')
+    
+    def get_vCPU_limit(self):
+        quota_client = self.session.client('service-quotas')
         response = quota_client.get_service_quota(ServiceCode='ec2', QuotaCode='L-417A185B')
         return int(response['Quota']['Value'])
-
-
-
-        
+    
+    def create_queue(self, queue_name):
+        sqs = self.session.resource('sqs')
+        queue = sqs.create_queue(QueueName=queue_name, Attributes={'DelaySeconds': '1', 
+                                                           'FifoQueue': 'true', 
+                                                           'ContentBasedDeduplication': 'true'})
+        return queue
+    
+    def create_instance(self, image_id, instance_type):
+        ec2 = self.session.resource('ec2')
+        instance = ec2.create_instances(ImageId=image_id, MinCount=1, MaxCount=1, InstanceType=instance_type)
+        return instance
