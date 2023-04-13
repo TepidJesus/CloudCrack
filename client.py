@@ -339,16 +339,15 @@ class AwsController:
         return instance
     
     def get_recomended_instance_type(self):
-        vCPU_limit = self.get_vCPU_limit()
-        if vCPU_limit >= 96:
+        if self.effective_vCPU_limit >= 96:
             return "p4d.24xlarge"
-        elif vCPU_limit >= 64:
+        elif self.effective_vCPU_limit >= 64:
             return "p3.16xlarge"
-        elif vCPU_limit >= 32:
+        elif self.effective_vCPU_limit >= 32:
             return "p3.8xlarge"
-        elif vCPU_limit >= 8:
+        elif self.effective_vCPU_limit >= 8:
             return "p3.2xlarge"
-        elif vCPU_limit >= 4:
+        elif self.effective_vCPU_limit >= 4:
             return "p2.xlarge"
         else:
             return "t2.micro"
