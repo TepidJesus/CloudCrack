@@ -338,6 +338,31 @@ class AwsController:
         instance = ec2.create_instances(ImageId=image_id, MinCount=1, MaxCount=1, InstanceType=instance_type)
         return instance
     
+    def close_instances(self):
+        ec2 = self.session.resource('ec2')
+        instances = ec2.instances.all()
+        for instance in instances:
+            instance.terminate()
+
+    def close_buckets(self):
+        s3 = self.session.resource('s3')
+        buckets = s3.buckets.all()
+        for bucket in buckets:
+            bucket.objects.all().delete()
+            bucket.delete()
+    
+    def close_queues(self):
+        sqs = self.session.resource('sqs')
+        queues = sqs.queues.all()
+        for queue in queues:
+            queue.delete()
+
+    def close_all(self):
+        self.close_instances()
+        self.close_buckets()
+        self.close_queues()
+
+    
     def get_recomended_instance_type(self):
         if self.effective_vCPU_limit >= 96:
             return "p4d.24xlarge"
