@@ -289,20 +289,25 @@ class AwsController:
     def __init__(self, aws_access_key_id, aws_secret_access_key, config):
             self.session = None
             self.config = config
-            if self.test_connection(aws_access_key_id, aws_secret_access_key):
+            if self.test_ec2(aws_access_key_id, aws_secret_access_key):
                 self.session = self.get_session()
             else:
-                print("Error: Failed to connect to AWS. Please check your credentials and try again.")
                 exit()
-
-            self.effective_vCPU_limit = self.get_effective_vCPU_limit() * self.config["AWS-Settings"]["usage_limit"]
+            if not self.test_sqs and not self.test_s3:
+                exit()
+            
+            self.effective_vCPU_limit = self.get_vCPU_limit() * int(self.config["AWS-Settings"]["usage_limit"])
     
-    def test_connection(self, aws_access_key_id, aws_secret_access_key):
+    def test_ec2(self, aws_access_key_id, aws_secret_access_key):
         try:
             client = boto3.client('ec2', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name='us-east-2')
-            client.run_instances(ImageId=self.config['AWS-Settings']["image_id"], MinCount=1, MaxCount=1, InstanceType='t2.micro', DryRun=True)
+            client.run_instances(ImageId=self.config['AWS-Settings']["image_id"], MinCount=1, MaxCount=1, InstanceType='t2.micro', DryRun=True)     
         except ClientError as e:
-            if 'DryRunOperation' not in str(e):
+            if e.response['Error']['Code'] == 'AccessDenied':
+                print("Error: EC2 Permission Test FAILED. Please make sure you have the correct permissions enabled for your IAM user.")
+                print("You can find the required permissions in the setup guide in the README.md file.")
+                return False
+            elif 'DryRunOperation' not in str(e):
                 print("Error: Your credentials are invalid. Please make sure you entered them correctly.")
                 return False
             else:
@@ -313,6 +318,30 @@ class AwsController:
         except:
              print("Sorry, there was an error validating your credentials. Check you have enabled the correct permissions.")
              return False
+        
+    def test_s3(self):
+        try:
+            s3 = self.session.resource('s3')
+            s3.list_buckets(DryRun=True)
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'AccessDenied':
+                print("Error: S3 Permission Test FAILED. Please make sure you have the correct permissions enabled for your IAM user.")
+                print("You can find the required permissions in the setup guide in the README.md file.")
+                return False
+        return True
+    
+    def test_sqs(self):
+        try:
+            sqs = self.session.resource('sqs')
+            sqs.create_queue(QueueName="test", Attributes={'DelaySeconds': '1', 
+                                                            'FifoQueue': 'true', 
+                                                            'ContentBasedDeduplication': 'true'}, DryRun=True)
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'AccessDenied':
+                print("Error: SQS Permission Test FAILED. Please make sure you have the correct permissions enabled for your IAM user.")
+                print("You can find the required permissions in the setup guide in the README.md file.")
+                return False
+        return True
         
     def get_session(self):
         dotenv.load_dotenv()
@@ -328,15 +357,30 @@ class AwsController:
     
     def create_queue(self, queue_name):
         sqs = self.session.resource('sqs')
-        queue = sqs.create_queue(QueueName=queue_name, Attributes={'DelaySeconds': '1', 
-                                                           'FifoQueue': 'true', 
-                                                           'ContentBasedDeduplication': 'true'})
+        try:
+            queue = sqs.create_queue(QueueName=queue_name, Attributes={'DelaySeconds': '1', 
+                                                            'FifoQueue': 'true', 
+                                                            'ContentBasedDeduplication': 'true'})
+        except:
+            print("Error: Failed to create queue. Please check your AWS credentials and try again.")
+            self.cleanup()
+            exit()
         return queue
     
     def create_instance(self, image_id, instance_type):
         ec2 = self.session.resource('ec2')
         instance = ec2.create_instances(ImageId=image_id, MinCount=1, MaxCount=1, InstanceType=instance_type)
         return instance
+    
+    def create_bucket(self, bucket_name):
+        s3 = self.session.resource('s3')
+        try:
+            bucket = s3.create_bucket(Bucket=bucket_name)
+        except:
+            print("Error: Failed to create bucket. Please check your AWS credentials and try again.")
+            self.cleanup()
+            exit()
+        return bucket
     
     def close_instances(self):
         ec2 = self.session.resource('ec2')
@@ -357,7 +401,7 @@ class AwsController:
         for queue in queues:
             queue.delete()
 
-    def close_all(self):
+    def cleanup(self):
         self.close_instances()
         self.close_buckets()
         self.close_queues()
