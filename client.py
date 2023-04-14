@@ -19,15 +19,11 @@ class ClientController:
     def __init__(self):
         if not self.dotenv_present():
             self.run_setup()
-        self.session = self.get_session()
-        self.vCPU_limit = self.get_vCPU_count(self.session)
-        if self.vCPU_limit < 4:
-            
+    
+        credentials = self.get_credentials()
+        self.aws_controller = AwsController(credentials[0], credentials[1], self.get_config())    
         self.job_handler = JobHandler(self.session, self.vCPU_limit)
-        self.config = self.get_config()
         
-
-
     def run(self):
         self.print_welcome()
         while True:
@@ -257,10 +253,16 @@ class ClientController:
         with open(".env", "w") as f:
             f.write("AWS_ACCESS_KEY_ID=" + aws_access_key_id)
             f.write("\nAWS_SECRET_ACCESS_KEY=" + aws_secret_access_key)
+
+    def get_credentials(self):
+        dotenv.load_dotenv()
+        aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+        aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+        return aws_access_key_id, aws_secret_access_key
         
     def run_setup(self):
-        print("It looks like this is your first time running this program.")
-        print("Lets get started by setting up your AWS credentials. You can find these instructions for this in the setup guide in the README.md file.")
+        print("It looks like this is your first time running CloudCrack.")
+        print("Lets get started by setting up your AWS credentials. You can find these instructions for this in the README.md file.")
 
         while True:
             aws_access_key_id = input("Enter your AWS Access Key ID: ")
@@ -328,7 +330,9 @@ class AwsController:
                 print("Error: S3 Permission Test FAILED. Please make sure you have the correct permissions enabled for your IAM user.")
                 print("You can find the required permissions in the setup guide in the README.md file.")
                 return False
-        return True
+            elif 'DryRunOperation' in str(e):
+                    return True
+            return True
     
     def test_sqs(self):
         try:
@@ -341,6 +345,8 @@ class AwsController:
                 print("Error: SQS Permission Test FAILED. Please make sure you have the correct permissions enabled for your IAM user.")
                 print("You can find the required permissions in the setup guide in the README.md file.")
                 return False
+            elif 'DryRunOperation' in str(e):
+                return True
         return True
         
     def get_session(self):
