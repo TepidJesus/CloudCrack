@@ -2,6 +2,7 @@ import json
 import boto3
 import uuid
 from enum import Enum, IntEnum
+from client import AwsController
 ### HashCat Command Format: hashcat -a <attack_mode> -m <hash_type> <hash> <wordlist/mask/length> -w 4
 
 class STATUS(IntEnum):
@@ -34,33 +35,19 @@ class Job:
     
 class JobHandler:
 
-    def __init__(self, session):
-        self.s3_client = session.client('s3')
-        self.sqs_client = session.resource('sqs')
-        self.ec2_client = session.resource('ec2')
+    def __init__(self, aws_controller):
+        self.aws_controller = aws_controller
 
-        self.outbound_queue = self.sqs_client.create_queue(QueueName='deliveryQueue.fifo', 
-                                               Attributes={'DelaySeconds': '1', 
-                                                           'FifoQueue': 'true', 
-                                                           'ContentBasedDeduplication': 'true'})
-        self.control_queue = self.sqs_client.create_queue(QueueName='controlQueue.fifo', 
-                                              Attributes={'DelaySeconds': '1', 
-                                                          'FifoQueue': 'true', 
-                                                          'ContentBasedDeduplication': 'true'})
-        self.inbound_queue = self.sqs_client.create_queue(QueueName='returnQueue.fifo', 
-                                              Attributes={'DelaySeconds': '1', 
-                                                          'FifoQueue': 'true', 
-                                                          'ContentBasedDeduplication': 'true'})
+        self.outbound_queue = self.aws_controller.create_queue('deliveryQueue')
+        self.control_queue = self.aws_controller.create_queue('controlQueue')
+        self.inbound_queue = self.aws_controller.create_queue('returnQueue')
+
+        self.available_instances = []
+        
         self.job_id = 1
         self.job_log = {}
 
-    def spool_instances(self, num_instances):
-        instances = self.ec2_client.create_instances(ImageId='ami-00eeedc4036573771', 
-                                         MinCount=num_instances, 
-                                         MaxCount=num_instances, 
-                                         InstanceType='t2.micro')
-        instances[-1].wait_until_running()
-        return instances
+
 
     def send_job(self, job):
         job.job_status = STATUS.QUEUED
