@@ -269,6 +269,7 @@ class ClientController:
             aws_secret_access_key = input("Enter your AWS Secret Access Key: ")
             print("Please wait while I validate your credentials...")
 
+
             
     def get_config(self):
         try:
@@ -364,7 +365,7 @@ class AwsController:
     def create_queue(self, queue_name):
         sqs = self.session.resource('sqs')
         try:
-            queue = sqs.create_queue(QueueName=queue_name, Attributes={'DelaySeconds': '1', 
+            queue = sqs.create_queue(QueueName=queue_name + ".fifo", Attributes={'DelaySeconds': '1', 
                                                             'FifoQueue': 'true', 
                                                             'ContentBasedDeduplication': 'true'})
         except:
@@ -413,16 +414,16 @@ class AwsController:
         self.close_queues()
 
     
-    def get_recomended_instance_type(self):
-        if self.effective_vCPU_limit >= 96:
-            return "p4d.24xlarge"
-        elif self.effective_vCPU_limit >= 64:
-            return "p3.16xlarge"
-        elif self.effective_vCPU_limit >= 32:
-            return "p3.8xlarge"
-        elif self.effective_vCPU_limit >= 8:
-            return "p3.2xlarge"
+    def get_recomended_instance_type(self): ## TODO: Find metric for optimal instance amount.  e.g when > 8 vCPU but < 32
+        if self.effective_vCPU_limit % 96 >=  1:
+            return ("p4d.24xlarge", self.effective_vCPU_limit % 96)
+        elif self.effective_vCPU_limit % 64 >= 1:
+            return ("p3.16xlarge", self.effective_vCPU_limit % 64)
+        elif self.effective_vCPU_limit % 32 >= 1:
+            return ("p3.8xlarge", self.effective_vCPU_limit % 32)
+        elif self.effective_vCPU_limit % 8 >= 1:
+            return ("p3.2xlarge", self.effective_vCPU_limit % 8)
         elif self.effective_vCPU_limit >= 4:
-            return "p2.xlarge"
+            return ("p2.xlarge", 1)
         else:
-            return "t2.micro"
+            return ("t2.micro", 1)
