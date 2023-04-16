@@ -5,6 +5,7 @@ import json
 import dotenv
 import os
 import sys
+import time
 
 ## Problems:
 # - No status response after reciever crashes
@@ -373,6 +374,24 @@ class AwsController:
             self.cleanup()
             exit()
         return queue
+    
+    def message_queue(self, queue, message_body, message_type):
+        try:
+            response = queue.send_message(MessageBody=message_body, MessageGroupId=message_type)
+            return response
+        except:
+            if self.test_sqs():
+                for i in range(3):
+                    response = queue.send_message(MessageBody=message_body, MessageGroupId=message_type)
+                    if response:
+                        return response
+                    else:
+                        time.sleep(1)
+            if message_type == "Job":
+                print(f"Error: Failed to send Job {message_body['job_id']} to the queue.")
+            else:
+                print(f"Error: Failed to send {message_type} to the queue.")
+            return None
     
     def create_instance(self, image_id, instance_type):
         ec2 = self.session.resource('ec2')
