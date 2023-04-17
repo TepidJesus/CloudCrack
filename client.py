@@ -393,10 +393,19 @@ class AwsController:
                 print(f"Error: Failed to send {message_type} to the queue.")
             return None
     
-    def create_instance(self, image_id, instance_type):
+    def create_instances(self):
+        instance_recomendation = self.get_recomended_instance_type()
         ec2 = self.session.resource('ec2')
-        instance = ec2.create_instances(ImageId=image_id, MinCount=1, MaxCount=1, InstanceType=instance_type)
-        return instance
+        try:
+            instances = ec2.create_instances(ImageId=self.config["image_id"], 
+                                            MinCount=instance_recomendation[1], 
+                                            MaxCount=instance_recomendation[1], 
+                                            InstanceType=instance_recomendation[0])
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'InsufficientInstanceCapacity':
+                print("Error: Failed to create instances. Looks like those pesky ML engineers are using all the GPU instances.")
+                print("Please try again later or try a different region. (Specify this in the settings menu)")
+        return instances
     
     def create_bucket(self, bucket_name):
         s3 = self.session.resource('s3')
@@ -435,13 +444,13 @@ class AwsController:
     
     def get_recomended_instance_type(self): ## TODO: Find metric for optimal instance amount.  e.g when > 8 vCPU but < 32
         if self.effective_vCPU_limit % 96 >=  1:
-            return ("p4d.24xlarge", self.effective_vCPU_limit % 96)
+            return ("p4d.24xlarge", self.effective_vCPU_limit // 96)
         elif self.effective_vCPU_limit % 64 >= 1:
-            return ("p3.16xlarge", self.effective_vCPU_limit % 64)
+            return ("p3.16xlarge", self.effective_vCPU_limit // 64)
         elif self.effective_vCPU_limit % 32 >= 1:
-            return ("p3.8xlarge", self.effective_vCPU_limit % 32)
+            return ("p3.8xlarge", self.effective_vCPU_limit // 32)
         elif self.effective_vCPU_limit % 8 >= 1:
-            return ("p3.2xlarge", self.effective_vCPU_limit % 8)
+            return ("p3.2xlarge", self.effective_vCPU_limit // 8)
         elif self.effective_vCPU_limit >= 4:
             return ("p2.xlarge", 1)
         else:
