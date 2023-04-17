@@ -11,8 +11,7 @@ import time
 # - No status response after reciever crashes
 
 ## TODO: Make an AWS handler class that handles all AWS interactions to abstract away the boto3 API
-## TODO: Finish settings menu and add a way to change settings and save them to the config file
-## TODO: Add a way to check vCPU limit
+## TODO: Finish settings menu and add a way to change settings and save them to the config fil
 ## TODO: Add multi-instance support (Need a way to quantify the number of instances to the user)
 
 class ClientController:
@@ -404,7 +403,12 @@ class AwsController:
         except ClientError as e:
             if e.response['Error']['Code'] == 'InsufficientInstanceCapacity':
                 print("Error: Failed to create instances. Looks like those pesky ML engineers are using all the GPU instances.")
-                print("Please try again later or try a different region. (Specify this in the settings menu)")
+                if len(instances) == 0:
+                    print("Please try again later or try a different region. (Specify this in the settings menu)")
+                else:
+                    print(f"Only Secured {len(instances)}. You can continue with this number of instances, but you will experience decreased performance.")
+                    print("You can also try again later or try a different region. (Specify this in the settings menu)")
+
         return instances
     
     def create_bucket(self, bucket_name):
@@ -412,7 +416,7 @@ class AwsController:
         try:
             bucket = s3.create_bucket(Bucket=bucket_name)
         except:
-            print("Error: Failed to create bucket. Please check your AWS credentials and try again.")
+            print("Error: Failed to create bucket. Please check your AWS credentials and try again.") ## NEED MORE SPECIFIC ERROR HANDLING
             self.cleanup()
             exit()
         return bucket
