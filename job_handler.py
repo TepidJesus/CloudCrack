@@ -47,19 +47,23 @@ class JobHandler:
         self.job_id = 1
         self.job_log = {}
 
-
-
     def send_job(self, job):
         job.job_status = STATUS.QUEUED
         if job.required_info is not None and job.attack_mode == 0:
             response = self.create_bucket(job.required_info)
-            if response == None:
+            if response == False:
+                print(f"Error: Failed to create bucket for job {job.job_id}. Continuing...")
                 job.job_status = STATUS.FAILED
                 return
             else:
                 job.required_info = response
-        response = self.outbound_queue.send_message(MessageBody=job.to_json(), MessageGroupId="Job")
-        self.job_log[job.job_id] = (job, response['ReceiptHandle']) 
+        response = self.aws_controller.message_queue(self.outbound_queue, job.to_json(), "Job")
+        if response == False:
+            print(f"Error: Failed to send job {job.job_id} to queue. Continuing...")
+            job.job_status = STATUS.FAILED
+            return
+        else:
+            self.job_log[job.job_id] = (job, response['ReceiptHandle']) 
 
     def get_new_job_id(self):
         num = self.job_id
