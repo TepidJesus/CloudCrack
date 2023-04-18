@@ -6,6 +6,7 @@ import dotenv
 import os
 import sys
 import time
+import uuid
 
 ## Problems:
 # - No status response after reciever crashes
@@ -324,7 +325,7 @@ class AwsController:
         
     def test_s3(self):
         try:
-            s3 = self.session.resource('s3')
+            s3 = self.session.client('s3')
             s3.list_buckets(DryRun=True)
         except ClientError as e:
             if e.response['Error']['Code'] == 'AccessDenied':
@@ -379,7 +380,7 @@ class AwsController:
         try:
             response = queue.send_message(MessageBody=message_body, MessageGroupId=message_type)
             return response
-        except:
+        except ClientError as e:
             if self.test_sqs():
                 for i in range(3):
                     response = queue.send_message(MessageBody=message_body, MessageGroupId=message_type)
@@ -387,12 +388,13 @@ class AwsController:
                         return response
                     else:
                         print(f"Error: Failed to send message to the queue. Retrying... {3 - i} attempts left.")
-                        time.sleep(2)
+                        time.sleep(5)
+                        return False
             if message_type == "Job":
                 print(f"Error: Failed to send Job {message_body['job_id']} to the queue.")
             else:
                 print(f"Error: Failed to send {message_type} to the queue.")
-            return None
+            return False
     
     def create_instances(self):
         instance_recomendation = self.get_recomended_instance_type()
@@ -413,15 +415,25 @@ class AwsController:
 
         return instances
     
-    def create_bucket(self, bucket_name):
-        s3 = self.session.resource('s3')
+    def create_bucket(self, bucket_prefix):
+        s3 = self.session.client('s3')
+        bucket_name = self.create_bucket_name(bucket_prefix)
         try:
-            bucket = s3.create_bucket(Bucket=bucket_name)
+            bucket = s3.create_bucket(Bucket=bucket_name, 
+                                      CreateBucketConfiguration={'LocationConstraint': "us-east-2"})
         except:
             print("Error: Failed to create bucket. Please check your AWS credentials and try again.") ## NEED MORE SPECIFIC ERROR HANDLING
-            self.cleanup()
-            exit()
-        return bucket
+            return False
+        return bucket_name
+    
+    def upload_file(self, bucket_name, file_path, file_name):
+        try:
+            self.session.client('s3').upload_file(file_path, bucket_name, file_name)
+        except ClientError as e:
+            print("Error: Failed to upload file. Please check your AWS credentials and try again.")
+    
+    def create_bucket_name(self, bucket_prefix):
+        return ''.join([bucket_prefix, str(uuid.uuid4())])
     
     def close_instances(self):
         ec2 = self.session.resource('ec2')

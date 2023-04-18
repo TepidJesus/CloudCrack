@@ -43,6 +43,7 @@ class JobHandler:
         self.inbound_queue = self.aws_controller.create_queue('returnQueue')
 
         self.available_instances = []
+        self.wordlist_bucket_name = None
         
         self.job_id = 1
         self.job_log = {}
@@ -50,7 +51,10 @@ class JobHandler:
     def send_job(self, job):
         job.job_status = STATUS.QUEUED
         if job.required_info is not None and job.attack_mode == 0:
+            if self.wordlist_bucket is None:
+                self.wordlist_bucket = self.aws_controller.create_bucket("wordlist-bucket")
             response = self.create_bucket(job.required_info)
+            response = self.aws_controller.upload_file(self.wordlist_bucket_name, job.required_info, job.required_info)
             if response == False:
                 print(f"Error: Failed to create bucket for job {job.job_id}. Continuing...")
                 job.job_status = STATUS.FAILED
