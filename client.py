@@ -333,7 +333,8 @@ class AwsController:
                 return False
             elif 'DryRunOperation' in str(e):
                     return True
-            return True
+            else:
+                return False
     
     def test_sqs(self):
         try:
@@ -374,7 +375,7 @@ class AwsController:
             exit()
         return queue
     
-    def message_queue(self, queue, message_body, message_type):
+    def message_queue(self, queue, message_body, message_type): ## TODO: FINISH ERROR HANDLING
         try:
             response = queue.send_message(MessageBody=message_body, MessageGroupId=message_type)
             return response
@@ -385,7 +386,8 @@ class AwsController:
                     if response:
                         return response
                     else:
-                        time.sleep(1)
+                        print(f"Error: Failed to send message to the queue. Retrying... {3 - i} attempts left.")
+                        time.sleep(2)
             if message_type == "Job":
                 print(f"Error: Failed to send Job {message_body['job_id']} to the queue.")
             else:
