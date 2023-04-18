@@ -53,8 +53,7 @@ class JobHandler:
         if job.required_info is not None and job.attack_mode == 0:
             if self.wordlist_bucket is None:
                 self.wordlist_bucket = self.aws_controller.create_bucket("wordlist-bucket")
-            response = self.create_bucket(job.required_info)
-            response = self.aws_controller.upload_file(self.wordlist_bucket_name, job.required_info, job.required_info)
+            response = self.aws_controller.upload_file(self.wordlist_bucket_name, job.required_info, job.required_info) ## TODO: Change naming scheme for wordlist files
             if response == False:
                 print(f"Error: Failed to create bucket for job {job.job_id}. Continuing...")
                 job.job_status = STATUS.FAILED
@@ -128,20 +127,6 @@ class JobHandler:
         with open(job.result_file, "w") as f:
             strng = f"{job.hash} : {job.required_info}"
             f.write(strng)
-
-    def create_bucket(self, wordlist_file):
-        bucket_name = ''.join(["list_bucket", str(uuid.uuid4())])
-        wordlist_bucket = self.s3_client.create_bucket(
-             Bucket=bucket_name,
-             CreateBucketConfiguration={
-             'LocationConstraint': "us-east-2"})
-        try:
-            response = self.s3_client.upload_file(wordlist_file, bucket_name, "UsersWordlist")
-            return bucket_name
-        except Exception as e:
-            print("Failed to upload wordlist to S3. Check the file path and try again.")
-            return None
-        
     
     def convert_status(self, status):
         if status == 1:
