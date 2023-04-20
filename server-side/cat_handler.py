@@ -12,8 +12,9 @@ import os
 
 class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler class and split mananging jobs and running jobs into two classes
     
-        def __init__(self, outbound_queue, control_queue, inbound_queue, s3_client):
-            super().__init__(outbound_queue, control_queue, inbound_queue, s3_client)
+        # NEED TO REDO THIS TO ALIGN WITH THE NEW JOB HANDLER
+        def __init__(self, session):
+            super().__init__(session)
             self.hashcat_status = 0
             self.current_job = None
             self.process = None
@@ -41,12 +42,13 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
 
             self.return_job(job_tmp)
 
-        def get_job_status(self, job):
-            return self.current_job.job_status
-
         # Get the wordlist from the S3 bucket
-        def get_wordlist(self, bucket_name):
-            self.s3_client.download_file(bucket_name, "UsersWordlist", "wordlist.txt")
+        def get_wordlist(self, bucket_name, file_name):
+            try:
+                self.s3_client.download_file(bucket_name, "UsersWordlist", file_name)
+            except Exception as e:
+                print(f"Error: Failed to download wordlist from S3 bucket {bucket_name}. Continuing...")
+                return None
             return os.getcwd() + "/wordlist.txt"
 
     
@@ -68,22 +70,19 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
 
             try:
                 if job.attack_mode == "0":
-                    wrdlst = self.get_wordlist(job.required_info) # Need to add failure handling to return job as failed
-                    print(wrdlst) #DEBUG
+                    wrdlst = self.get_wordlist(job.required_info[1], job.required_info[0]) # Need to add failure handling to return job as failed
+                    if wrdlst is None:
+                        self.job_complete(self.current_job, "ERROR: Failed to download wordlist from S3 bucket")
+                        return
                     job_as_command = hashcat(f'-a0', f'-m{job.hash_type}', job.hash, wrdlst, 
                                             '-w4', "--status", "--quiet", "--status-json", _bg=True, 
                                             _out=self.process_output, _ok_code=[0,1])
-                    self.process = job_as_command
-                    #job_as_command.wait()
-                    
-                                            
+                    self.process = job_as_command                           
                 elif job.attack_mode == "3":
                     job_as_command = hashcat(f'-a3', f'-m{job.hash_type}', job.hash, job.required_info, 
                                             '-w4', "--status", "--quiet", "--status-json", _bg=True, 
                                             _out=self.process_output, _ok_code=[0,1])
                     self.process = job_as_command
-                    #job_as_command.wait()
-
                 else:
                     print("Invalid attack mode")
                     return
@@ -92,11 +91,7 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
                 self.job_complete(self.current_job, f"ERROR: {job.exit_code}")
             except Exception as e:
                 print(e)
-
-            
-            
-
-                
+               
         def process_output(self, line):
             try:
                 line_json = json.loads(line)
@@ -114,7 +109,9 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
             
 
         def report_progress(self, current, total):
-            self.outbound_queue.send_message(MessageBody=json.dumps({"job_id": self.current_job.job_id, "current": current, "total": total}), 
+            self.outbound_queue.send_message(MessageBody=json.dumps({"job_id": self.current_job.job_id, 
+                                                                    "current": current, 
+                                                                    "total": total}), 
                                                                     MessageGroupId="Status")
  
         def job_complete(self, job, result):
