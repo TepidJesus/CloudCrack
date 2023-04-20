@@ -53,20 +53,24 @@ class JobHandler:
         if job.required_info is not None and job.attack_mode == 0:
             if self.wordlist_bucket is None:
                 self.wordlist_bucket = self.aws_controller.create_bucket("wordlist-bucket")
-            response = self.aws_controller.upload_file(self.wordlist_bucket_name, job.required_info, job.required_info) ## TODO: Change naming scheme for wordlist files
+            file_name = self.get_file_name(job.required_info)
+            response = self.aws_controller.upload_file(job.required_info, self.wordlist_bucket_name, file_name)
             if response == False:
                 print(f"Error: Failed to create bucket for job {job.job_id}. Continuing...")
                 job.job_status = STATUS.FAILED
                 return
-            else:
-                job.required_info = response
+            
+        job.required_info = (file_name, self.wordlist_bucket_name)
         response = self.aws_controller.message_queue(self.outbound_queue, job.to_json(), "Job")
         if response == False:
             print(f"Error: Failed to send job {job.job_id} to queue. Continuing...")
             job.job_status = STATUS.FAILED
             return
         else:
-            self.job_log[job.job_id] = (job, response['ReceiptHandle']) 
+            self.job_log[job.job_id] = (job, response['ReceiptHandle'])
+
+    def get_file_name(self, file_location):
+        return file_location.split("/")[-1]
 
     def get_new_job_id(self):
         num = self.job_id

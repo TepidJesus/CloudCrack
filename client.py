@@ -431,6 +431,8 @@ class AwsController:
             self.session.client('s3').upload_file(file_path, bucket_name, file_name)
         except ClientError as e:
             print("Error: Failed to upload file. Please check your AWS credentials and try again.")
+            return False
+        return True
     
     def create_bucket_name(self, bucket_prefix):
         return ''.join([bucket_prefix, str(uuid.uuid4())])
@@ -460,7 +462,7 @@ class AwsController:
         self.close_queues()
 
     
-    def get_recomended_instance_type(self): ## TODO: Find metric for optimal instance amount.  e.g when > 8 vCPU but < 32
+    def get_recomended_instance_type(self):
         if self.effective_vCPU_limit % 96 >=  1:
             return ("p4d.24xlarge", self.effective_vCPU_limit // 96)
         elif self.effective_vCPU_limit % 64 >= 1:
