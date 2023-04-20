@@ -23,7 +23,7 @@ class ClientController:
     
         credentials = self.get_credentials()
         self.aws_controller = AwsController(credentials[0], credentials[1], self.get_config())    
-        self.job_handler = JobHandler(self.session, self.vCPU_limit)
+        self.job_handler = JobHandler(self.aws_controller)
         
     def run(self):
         self.print_welcome()

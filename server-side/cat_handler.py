@@ -13,13 +13,13 @@ import os
 class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler class and split mananging jobs and running jobs into two classes
     
         # NEED TO REDO THIS TO ALIGN WITH THE NEW JOB HANDLER
-        def __init__(self, session):
-            super().__init__(session)
+        def __init__(self, aws_controller):
+            super().__init__(aws_controller)
             self.hashcat_status = 0
             self.current_job = None
             self.process = None
         
-        def create_job(self, _hash, hash_type, attack_mode, required_info):
+        def create_job(self, _hash, hash_type, attack_mode, required_info): ## Violates the Liskov Substitution Principle
             raise NotImplementedError("This method is not implemented for HashcatHandler")
         
         def cancel_job(self, job_id):
