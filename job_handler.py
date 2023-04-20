@@ -69,8 +69,9 @@ class JobHandler:
         else:
             self.job_log[job.job_id] = (job, response['ReceiptHandle'])
 
+    
     def get_file_name(self, file_location):
-        return file_location.split("/")[-1]
+        return file_location.split("/")[-1].split(".")[0]
 
     def get_new_job_id(self):
         num = self.job_id
