@@ -241,8 +241,6 @@ class ClientController:
                 return False
         return True
          
-
-          
     def get_config(self):
         try:
             with open("config.json", "r") as f:
@@ -261,8 +259,8 @@ class ClientController:
 
 
 class AwsController:
-    def __init__(self, aws_access_key_id, aws_secret_access_key, config):
-            self.credentialManager = self.CredentialManager()
+    def __init__(self, config):
+            self.credentialManager = self.CredentialManager(self)
             self.session = None
             self.config = config
             if self.test_ec2(aws_access_key_id, aws_secret_access_key):
@@ -449,6 +447,12 @@ class AwsController:
             return ("t2.micro", 1)
         
     class CredentialManager:
+
+        def __ini__(self, aws_controller):
+            self.aws_access_key_id = None
+            self.aws_secret_access_key = None
+            self.aws_controller = aws_controller
+
         def set_credentials(self, aws_access_key_id, aws_secret_access_key):
             with open(".env", "w") as f:
                 f.write("AWS_ACCESS_KEY_ID=" + aws_access_key_id)
@@ -471,7 +475,8 @@ class AwsController:
                     return aws_access_key_id, aws_secret_access_key
                 except:
                     return False
-            return False
+            else:
+                self.run_setup()
         
         def run_setup(self):
             print("It looks like this is your first time running CloudCrack.")
@@ -481,3 +486,15 @@ class AwsController:
                 aws_access_key_id = input("Enter your AWS Access Key ID: ")
                 aws_secret_access_key = input("Enter your AWS Secret Access Key: ")
                 print("Please wait while I validate your credentials...")
+                if self.aws_controller.test_credentials(aws_access_key_id, aws_secret_access_key):
+                    print("Success! Your credentials have been validated.")
+                    self.set_credentials(aws_access_key_id, aws_secret_access_key)
+                    return aws_access_key_id, aws_secret_access_key
+                else:
+                    print("Error: Failed to validate credentials. Please try again.")
+                    print("If you are sure your credentials are correct, please check your internet connection and try again.")
+                    print("If you are still having issues, please open an issue on GitHub.")
+                    continue
+                
+            
+
