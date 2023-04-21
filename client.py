@@ -463,10 +463,15 @@ class AwsController:
                 return False
             
         def get_credentials(self):
-            dotenv.load_dotenv()
-            aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
-            aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-            return aws_access_key_id, aws_secret_access_key
+            if self.dotenv_present():    
+                dotenv.load_dotenv()
+                try:
+                    aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+                    aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+                    return aws_access_key_id, aws_secret_access_key
+                except:
+                    return False
+            return False
         
         def run_setup(self):
             print("It looks like this is your first time running CloudCrack.")
