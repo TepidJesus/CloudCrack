@@ -13,7 +13,6 @@ import uuid
 
 ## TODO: Make an AWS handler class that handles all AWS interactions to abstract away the boto3 API
 ## TODO: Finish settings menu and add a way to change settings and save them to the config fil
-## TODO: Add multi-instance support (Need a way to quantify the number of instances to the user)
 
 class ClientController:
 
@@ -241,37 +240,9 @@ class ClientController:
             if char != "?" and i % 2 == 0:
                 return False
         return True
-    
-    def dotenv_present(self):
-        try:
-            with open(".env", "r") as f:
-                dotenv = f.read()
-            return True
-        except:
-            return False
-        
-    def set_credentials(self, aws_access_key_id, aws_secret_access_key):
-        with open(".env", "w") as f:
-            f.write("AWS_ACCESS_KEY_ID=" + aws_access_key_id)
-            f.write("\nAWS_SECRET_ACCESS_KEY=" + aws_secret_access_key)
+         
 
-    def get_credentials(self):
-        dotenv.load_dotenv()
-        aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
-        aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-        return aws_access_key_id, aws_secret_access_key
-        
-    def run_setup(self):
-        print("It looks like this is your first time running CloudCrack.")
-        print("Lets get started by setting up your AWS credentials. You can find these instructions for this in the README.md file.")
-
-        while True:
-            aws_access_key_id = input("Enter your AWS Access Key ID: ")
-            aws_secret_access_key = input("Enter your AWS Secret Access Key: ")
-            print("Please wait while I validate your credentials...")
-
-
-            
+          
     def get_config(self):
         try:
             with open("config.json", "r") as f:
@@ -291,6 +262,7 @@ class ClientController:
 
 class AwsController:
     def __init__(self, aws_access_key_id, aws_secret_access_key, config):
+            self.credentialManager = self.CredentialManager()
             self.session = None
             self.config = config
             if self.test_ec2(aws_access_key_id, aws_secret_access_key):
@@ -475,3 +447,32 @@ class AwsController:
             return ("p2.xlarge", 1)
         else:
             return ("t2.micro", 1)
+        
+    class CredentialManager:
+        def set_credentials(self, aws_access_key_id, aws_secret_access_key):
+            with open(".env", "w") as f:
+                f.write("AWS_ACCESS_KEY_ID=" + aws_access_key_id)
+                f.write("\nAWS_SECRET_ACCESS_KEY=" + aws_secret_access_key)
+
+        def dotenv_present(self):
+            try:
+                with open(".env", "r") as f:
+                    dotenv = f.read()
+                return True
+            except:
+                return False
+            
+        def get_credentials(self):
+            dotenv.load_dotenv()
+            aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+            aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+            return aws_access_key_id, aws_secret_access_key
+        
+        def run_setup(self):
+            print("It looks like this is your first time running CloudCrack.")
+            print("Lets get started by setting up your AWS credentials. You can find these instructions for this in the README.md file.")
+
+            while True:
+                aws_access_key_id = input("Enter your AWS Access Key ID: ")
+                aws_secret_access_key = input("Enter your AWS Secret Access Key: ")
+                print("Please wait while I validate your credentials...")
