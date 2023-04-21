@@ -448,7 +448,7 @@ class AwsController:
         
     class CredentialManager:
 
-        def __ini__(self, aws_controller):
+        def __init__(self, aws_controller):
             self.aws_access_key_id = None
             self.aws_secret_access_key = None
             self.aws_controller = aws_controller
@@ -457,15 +457,7 @@ class AwsController:
             with open(".env", "w") as f:
                 f.write("AWS_ACCESS_KEY_ID=" + aws_access_key_id)
                 f.write("\nAWS_SECRET_ACCESS_KEY=" + aws_secret_access_key)
-
-        def dotenv_present(self):
-            try:
-                with open(".env", "r") as f:
-                    dotenv = f.read()
-                return True
-            except:
-                return False
-            
+        
         def get_credentials(self):
             if self.dotenv_present():    
                 dotenv.load_dotenv()
@@ -477,7 +469,21 @@ class AwsController:
                     return False
             else:
                 self.run_setup()
+
+        def get_aws_access_key_id(self):
+            return self.aws_access_key_id
         
+        def get_aws_secret_access_key(self):
+            return self.aws_secret_access_key
+
+        def dotenv_present(self):
+            try:
+                with open(".env", "r") as f:
+                    dotenv = f.read()
+                return True
+            except:
+                return False
+            
         def run_setup(self):
             print("It looks like this is your first time running CloudCrack.")
             print("Lets get started by setting up your AWS credentials. You can find these instructions for this in the README.md file.")
@@ -486,7 +492,7 @@ class AwsController:
                 aws_access_key_id = input("Enter your AWS Access Key ID: ")
                 aws_secret_access_key = input("Enter your AWS Secret Access Key: ")
                 print("Please wait while I validate your credentials...")
-                if self.aws_controller.test_credentials(aws_access_key_id, aws_secret_access_key):
+                if self.aws_controller.test_ec2(aws_access_key_id, aws_secret_access_key):
                     print("Success! Your credentials have been validated.")
                     self.set_credentials(aws_access_key_id, aws_secret_access_key)
                     return aws_access_key_id, aws_secret_access_key
