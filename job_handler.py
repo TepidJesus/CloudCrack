@@ -1,8 +1,5 @@
 import json
-import boto3
-import uuid
 from enum import Enum, IntEnum
-from client import AwsController
 ### HashCat Command Format: hashcat -a <attack_mode> -m <hash_type> <hash> <wordlist/mask/length> -w 4
 
 class STATUS(IntEnum):
@@ -60,15 +57,15 @@ class JobHandler:
                 job.job_status = STATUS.FAILED
                 return
             
-        job.required_info = (file_name, self.wordlist_bucket_name)
+            job.required_info = (file_name, self.wordlist_bucket_name)
         response = self.aws_controller.message_queue(self.outbound_queue, job.to_json(), "Job")
         if response == False:
             print(f"Error: Failed to send job {job.job_id} to queue. Continuing...")
             job.job_status = STATUS.FAILED
             return
         else:
-            self.job_log[job.job_id] = (job, response['ReceiptHandle'])
-
+            self.job_log[job.job_id] = (job, response['ReceiptHandle']) ## TODO: need to move a way from using receipt handle. Consider moving away from FIFO queues
+ 
     
     def get_file_name(self, file_location):
         return file_location.split("/")[-1].split(".")[0]
