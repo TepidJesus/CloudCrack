@@ -64,7 +64,7 @@ class JobHandler:
             job.job_status = STATUS.FAILED
             return
         else:
-            self.job_log[job.job_id] = (job, response['ReceiptHandle']) ## TODO: need to move a way from using receipt handle. Consider moving away from FIFO queues
+            self.job_log[job.job_id] = job ## TODO: need to move a way from using receipt handle. Consider moving away from FIFO queues
  
     
     def get_file_name(self, file_location):
@@ -80,24 +80,28 @@ class JobHandler:
         return job
     
     def get_job(self, job_id):
-        return self.job_log[job_id][0]
+        return self.job_log[job_id]
     
     def cancel_job(self, job_id):
         if job_id not in self.job_log:
-            return
-        
-        if self.job_log[job_id][0].job_status == STATUS.QUEUED:
-            self.sqs_client.delete_message(QueueUrl=self.outbound_queue["QueueUrl"], ReceiptHandle=self.job_log[job_id][1])
+            print(f"Error: Job {job_id} does not exist.")
+            return False
 
-        self.job_log[job_id].job_status[0] = STATUS.CANCELLED
-        self.control_queue.send_message(MessageBody=Command(job_id, REQUEST.CANCEL).to_json(), MessageGroupId="Command")
+        response = self.aws_controller.message_queue(self.control_queue, Command(job_id, REQUEST.CANCEL).to_json(), "Command")
+        if response == False:
+            print(f"Error: Failed to cancel job #{job_id} to queue. The job may still be running.")
+            return False
+        else:
+            self.job_log[job_id].job_status = STATUS.CANCELLED
+            print(f"Job {job_id} cancelled.")
+            return True
 
     def cancel_all_jobs(self):
         for job in self.job_log:
             self.cancel_job(job)
     
     def get_local_job_status(self, job):
-        return self.job_log[job.job_id][0].job_status
+        return self.job_log[job.job_id].job_status
 
     def check_for_response(self):
         inboundMessages = self.inbound_queue.receive_messages(MaxNumberOfMessages=10)
@@ -106,14 +110,14 @@ class JobHandler:
             for message in inboundMessages:
                 try:
                     job = self.load_from_json(message.body)
-                    self.job_log[job.job_id][0] = job
+                    self.job_log[job.job_id] = job
                     if job.job_status == STATUS.COMPLETED and job.result_file is not None:
                         self.update_result_file(job)
                 except Exception as e:
                     status = json.loads(message.body)
-                    self.job_log[status["job_id"]][0].progress[0] = status["current"]
-                    self.job_log[status["job_id"]][0].progress[1] = status["total"]
-                    self.job_log[status["job_id"]][0].job_status = STATUS.RUNNING
+                    self.job_log[status["job_id"]].progress[0] = status["current"]
+                    self.job_log[status["job_id"]].progress[1] = status["total"]
+                    self.job_log[status["job_id"]].job_status = STATUS.RUNNING
 
                 message.delete()
         
