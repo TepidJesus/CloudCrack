@@ -1,30 +1,11 @@
 {
-    "Attack-Mode": "Dictionary",
-
-    "Dictionary-Attack-Settings": {
-        "Custom_wordlist": false,
-        "custom_wordlist": "C:\\Users\\exampleUser\\Desktop\\Examplewordlist.txt",
-        "seclists_wordlist": "rockyou.txt"
-    },
-
-    "Mask-Attack-Settings": {
-        "mask": "?a?a?a?a?a?a?a?a?a",
-        "increment": false
-    }, 
-
-    "Brute-Force-Attack-Settings": {
-        "min-length": 8,
-        "max-length": 8,
-        "increment": false
-    },
 
     "AWS-Settings": {
-        "vCPU-Limit": 1,
         "use-spot": true,
         "region": "us-east-2",
-        "image_id": "ami-00eeedc4036573771",
-        "instance_type": "t2.micro"
-    }
-    
+        "image_id": "ami-0a695f0d95cefc163", 
+        "instance_type": "t2.micro",
+        "usage_limit": 1
+    }    
 
 }
