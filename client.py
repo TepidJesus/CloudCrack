@@ -1,10 +1,10 @@
 from job_handler import JobHandler, STATUS
 import boto3
 from botocore.exceptions import ClientError
+from botocore.credentials import InstanceMetadataFetcher
 import json
 import dotenv
 import os
-import sys
 import time
 import uuid
 
@@ -13,6 +13,7 @@ import uuid
 
 ## TODO: Make an AWS handler class that handles all AWS interactions to abstract away the boto3 API
 ## TODO: Finish settings menu and add a way to change settings and save them to the config fil
+## TODO: Potentially add a seperate control queue for each Ec2 hashing instance
 
 class ClientController:
 
@@ -255,18 +256,23 @@ class ClientController:
 
 
 class AwsController:
-    def __init__(self, config):
-            self.credentialManager = self.CredentialManager(self)
+    def __init__(self, config, mode):
+            self.credentialManager = self.CredentialManager(self, mode)
             self.session = None
             self.config = config
-            if self.test_ec2(self.credentialManager.get_aws_access_key_id(), self.credentialManager.get_aws_secret_access_key()):
-                self.session = self.get_session()
-            else:
-                exit()
-            if not self.test_sqs() and not self.test_s3():
-                exit()
-            
-            self.effective_vCPU_limit = self.get_vCPU_limit() * int(self.config["AWS-Settings"]["usage_limit"])
+            if mode == "client":
+                if self.test_ec2(self.credentialManager.get_aws_access_key_id(), self.credentialManager.get_aws_secret_access_key()):
+                    self.session = self.get_session("client")
+                else:
+                    exit()
+                if not self.test_sqs() and not self.test_s3():
+                    exit()
+                
+                self.effective_vCPU_limit = self.get_vCPU_limit() * int(self.config["AWS-Settings"]["usage_limit"])
+            elif mode == "server":
+                self.session = self.get_session("server")
+
+
     
     def test_ec2(self, aws_access_key_id, aws_secret_access_key):
         try:
@@ -319,11 +325,16 @@ class AwsController:
         print("SQS Test Error") ## DEBUG
         return False
         
-    def get_session(self):
-        dotenv.load_dotenv()
-        aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
-        aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-        session = boto3.Session(aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name='us-east-2')
+    def get_session(self, mode):
+        if mode == "client":
+            dotenv.load_dotenv()
+            aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+            aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+            session = boto3.Session(aws_access_key_id=aws_access_key_id, 
+                                    aws_secret_access_key=aws_secret_access_key, 
+                                    region_name='us-east-2')
+        else:
+            session = boto3.Session() # Should pull credentials from the Ec2 metadata service
         return session
     
     def get_vCPU_limit(self):
@@ -333,11 +344,13 @@ class AwsController:
     
     def create_queue(self, queue_name):
         sqs = self.session.resource('sqs')
+        print("Creating queue: " + queue_name + ".fifo") ## DEBUG
         try:
             queue = sqs.create_queue(QueueName=queue_name + ".fifo", Attributes={'DelaySeconds': '1', 
                                                             'FifoQueue': 'true', 
                                                             'ContentBasedDeduplication': 'true'})
-        except:
+        except Exception as e:
+            print(e) ## DEBUG
             print("Error: Failed to create queue. Please check your AWS credentials and try again.")
             self.cleanup()
             exit()
@@ -466,6 +479,7 @@ class AwsController:
                     return False
             else:
                 self.run_setup()
+
 
         def get_aws_access_key_id(self):
             return self.aws_access_key_id

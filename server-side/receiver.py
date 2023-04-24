@@ -7,10 +7,11 @@ import sys
 sys.path.insert(0, "../")
 from job_handler import STATUS, REQUEST
 import json
+from client import AwsController
 
 ### HashCat Command Format: hashcat -a <attack_mode> -m <hash_type> <hash> <wordlist/mask/length> -w 4
 
-## Check For Two aws SQS Queues and assign them to variables
+## TODO: Integrate new AWSController class into here.
 def get_infrastructure(session):
     sqs = session.resource('sqs')
     delivery = sqs.get_queue_by_name(QueueName='deliveryQueue.fifo')
@@ -26,6 +27,15 @@ def check_queue(queue):
         return messages[0]
     return None
 
+def get_config():
+    try:
+        with open("../config.json", "r") as f:
+            config = json.load(f)
+    except:
+        print("Error: The config file does not exist. Did you delete it? Go get a new one from the repository, it's kind of important.")
+        exit()
+    return config
+
 def main():
 
     try:
@@ -38,7 +48,7 @@ def main():
         exit()    
 
     delivery, control, return_queue, s3_client = get_infrastructure(session)
-    cat_handler = HashcatHandler(return_queue, control, delivery, s3_client)
+    cat_handler = HashcatHandler(AwsController(get_config()))
     print("Receiver is running...")
     while True:
 
@@ -52,14 +62,15 @@ def main():
                 cat_handler.cancel_job(int(commandJs["job_id"]))
             command.delete()
         
-        new_job = check_queue(delivery)
-        print("Checking for new jobs...")
-        if new_job != None:
-            print("New job found!")
-            job = cat_handler.load_from_json(new_job.body)
-            print(job.to_json())
-            cat_handler.run_job(job)
-            new_job.delete()
+        if cat_handler.current_job is None:
+            new_job = check_queue(delivery)
+            print("Checking for new jobs...")
+            if new_job != None:
+                print("New job found!")
+                job = cat_handler.load_from_json(new_job.body)
+                print(job.to_json())
+                cat_handler.run_job(job)
+                new_job.delete()
         time.sleep(5)
 
 main()

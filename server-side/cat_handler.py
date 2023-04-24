@@ -8,7 +8,7 @@ import json
 import sh
 import os
 
-
+## TODO: Integrate new AWSController class into here.
 
 class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler class and split mananging jobs and running jobs into two classes
     
@@ -18,9 +18,6 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
             self.hashcat_status = 0
             self.current_job = None
             self.process = None
-        
-        def create_job(self, _hash, hash_type, attack_mode, required_info): ## Violates the Liskov Substitution Principle
-            raise NotImplementedError("This method is not implemented for HashcatHandler")
         
         def cancel_job(self, job_id):
             if self.current_job is None:
