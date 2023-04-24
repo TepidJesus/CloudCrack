@@ -334,7 +334,7 @@ class AwsController:
                                     aws_secret_access_key=aws_secret_access_key, 
                                     region_name='us-east-2')
         else:
-            session = boto3.Session() # Should pull credentials from the Ec2 metadata service
+            session = boto3.Session(region_name='us-east-2') # Should pull credentials from the Ec2 metadata service
         return session
     
     def get_vCPU_limit(self):
@@ -437,7 +437,7 @@ class AwsController:
             queue.delete()
 
     def cleanup(self):
-        self.close_instances()
+        #self.close_instances() ## DEBUG
         self.close_buckets()
         self.close_queues()
 
