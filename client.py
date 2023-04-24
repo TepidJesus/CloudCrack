@@ -18,7 +18,7 @@ import uuid
 class ClientController:
 
     def __init__(self):
-        self.aws_controller = AwsController(self.get_config())    
+        self.aws_controller = AwsController(self.get_config(), "client")
         self.job_handler = JobHandler(self.aws_controller)
         
     def run(self):
@@ -257,7 +257,7 @@ class ClientController:
 
 class AwsController:
     def __init__(self, config, mode):
-            self.credentialManager = self.CredentialManager(self, mode)
+            self.credentialManager = self.CredentialManager(self)
             self.session = None
             self.config = config
             if mode == "client":

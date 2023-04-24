@@ -48,7 +48,7 @@ def main():
         exit()    
 
     delivery, control, return_queue, s3_client = get_infrastructure(session)
-    cat_handler = HashcatHandler(AwsController(get_config()))
+    cat_handler = HashcatHandler(AwsController(get_config()), "server")
     print("Receiver is running...")
     while True:
 
