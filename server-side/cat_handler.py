@@ -32,12 +32,15 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
                 self.job_complete(self.current_job, "CANCELLED")
             
             job_tmp = self.current_job
-            self.current_job = None
-            self.process = None
+            self.reset_job()
 
             print("Job cancelled")
 
             self.return_job(job_tmp)
+
+        def reset_job(self):
+            self.current_job = None
+            self.process = None
 
 
         def get_wordlist(self, bucket_name, file_name):
@@ -86,9 +89,11 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
                     
             except sh.ErrorReturnCode: # When hashcat encounters an error that must be reported to dev
                 self.job_complete(self.current_job, f"ERROR: {job.exit_code}")
+                self.reset_job()
             except Exception as e:
                 print("Error: Failed to run job")
                 self.job_complete(self.current_job, "ERROR: Unknown error")
+                self.reset_job()
                 return
                
         def process_output(self, line):
