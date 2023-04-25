@@ -32,18 +32,18 @@ class Job:
     
 class JobHandler:
 
-    def __init__(self, aws_controller):
+    def __init__(self, aws_controller, mode):
         self.aws_controller = aws_controller
-
-        self.outbound_queue = self.aws_controller.create_queue('deliveryQueue')
-        self.control_queue = self.aws_controller.create_queue('controlQueue')
-        self.inbound_queue = self.aws_controller.create_queue('returnQueue')
-
+        if mode == "client":
+            self.outbound_queue = self.aws_controller.create_queue('deliveryQueue')
+            self.control_queue = self.aws_controller.create_queue('controlQueue')
+            self.inbound_queue = self.aws_controller.create_queue('returnQueue')
+        
         self.available_instances = []
         self.wordlist_bucket_name = None
-        
-        self.job_id = 1
         self.job_log = {}
+        self.job_id = 1 
+        
 
     def send_job(self, job):
         job.job_status = STATUS.QUEUED

@@ -14,7 +14,7 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
     
         # NEED TO REDO THIS TO ALIGN WITH THE NEW JOB HANDLER
         def __init__(self, aws_controller):
-            super().__init__(aws_controller)
+            super().__init__(aws_controller, "server")
             self.hashcat_status = 0
             self.current_job = None
             self.process = None

@@ -19,7 +19,7 @@ class ClientController:
 
     def __init__(self):
         self.aws_controller = AwsController(self.get_config(), "client")
-        self.job_handler = JobHandler(self.aws_controller)
+        self.job_handler = JobHandler(self.aws_controller, "client")
         
     def run(self):
         self.print_welcome()
