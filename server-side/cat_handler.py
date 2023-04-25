@@ -87,11 +87,14 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
                     print("Invalid attack mode")
                     return
                 
-            except hashcat.ErrorReturnCode:
-                    print("Caught with hashcat error")
             except sh.ErrorReturnCode: # When hashcat encounters an error that must be reported to dev
                 self.job_complete(self.current_job, f"ERROR: {job.exit_code}")
                 self.reset_job()
+            except sh.SignalException_SIGSGV:
+                print("Error: Hashcat encountered a fatal error")
+                self.job_complete(self.current_job, "ERROR: Hashcat encountered a fatal error")
+                self.reset_job()
+                return
             except Exception as e:
                 print("Error: Failed to run job")
                 self.job_complete(self.current_job, "ERROR: Unknown error")
