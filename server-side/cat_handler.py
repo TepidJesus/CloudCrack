@@ -86,7 +86,9 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
                 else:
                     print("Invalid attack mode")
                     return
-                    
+                
+            except hashcat.ErrorReturnCode:
+                    print("Caught with hashcat error")
             except sh.ErrorReturnCode: # When hashcat encounters an error that must be reported to dev
                 self.job_complete(self.current_job, f"ERROR: {job.exit_code}")
                 self.reset_job()
@@ -131,8 +133,7 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
             else:
                 job.job_status = STATUS.COMPLETED
             job.required_info = result
-            self.current_job = None
-            self.process = None
+            self.reset_job()
             print(f"Job {job.job_id} completed with result: {result}")
             self.return_job(job)
 
