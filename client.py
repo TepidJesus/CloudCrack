@@ -33,6 +33,7 @@ class ClientController:
                 self.print_help()
             elif input_as_list[0] in ["exit", "close", "quit"]:
                 self.job_handler.cancel_all_jobs()
+                self.aws_controller.cleanup()
                 break
             elif input_as_list[0] == "show":
                 if len(input_as_list) < 2:
@@ -260,6 +261,7 @@ class AwsController:
             self.credentialManager = self.CredentialManager(self)
             self.session = None
             self.config = config
+            self.instances = []
             if mode == "client":
                 if self.test_ec2(self.credentialManager.get_aws_access_key_id(), self.credentialManager.get_aws_secret_access_key()):
                     self.session = self.get_session("client")
@@ -342,6 +344,9 @@ class AwsController:
         response = quota_client.get_service_quota(ServiceCode='ec2', QuotaCode='L-417A185B')
         return int(response['Quota']['Value'])
     
+    def get_instances(self):
+        return self.instances
+    
     def create_queue(self, queue_name):
         sqs = self.session.resource('sqs')
         print("Creating queue: " + queue_name + ".fifo") ## DEBUG
@@ -393,6 +398,8 @@ class AwsController:
                     print(f"Only Secured {len(instances)}. You can continue with this number of instances, but you will experience decreased performance.")
                     print("You can also try again later or try a different region. (Specify this in the settings menu)")
 
+        self.instances = self.instances + instances
+
         return instances
     
     def create_bucket(self, bucket_prefix):
@@ -419,8 +426,7 @@ class AwsController:
     
     def close_instances(self):
         ec2 = self.session.resource('ec2')
-        instances = ec2.instances.all()
-        for instance in instances:
+        for instance in self.instances:
             instance.terminate()
 
     def close_buckets(self):
