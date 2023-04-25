@@ -28,7 +28,7 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
             self.current_job.job_status = STATUS.CANCELLED
             try:
                 self.process.kill()
-            except sh.SignalException_SIGKILL: # When job is cancelled
+            except SignalException_SIGKILL: # When job is cancelled
                 self.job_complete(self.current_job, "CANCELLED")
             
             job_tmp = self.current_job
@@ -83,7 +83,6 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
                                             '-w4', "--status", "--quiet", "--status-json", _bg=True, 
                                             _out=self.process_output, _ok_code=[0,1])
                     self.process = job_as_command
-                    job_as_command.wait()
                 else:
                     print("Invalid attack mode")
                     return
