@@ -5,7 +5,7 @@ sys.path.insert(0, "../")
 from job_handler import JobHandler, Job, STATUS, Command, REQUEST
 from sh import hashcat
 import json
-import sh
+from sh import ErrorReturnCode, SignalException_SIGKILL, SignalException_SIGSEGV
 import os
 
 ## TODO: Integrate new AWSController class into here.
@@ -88,10 +88,10 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
                     print("Invalid attack mode")
                     return
                 
-            except sh.ErrorReturnCode: # When hashcat encounters an error that must be reported to dev
-                self.job_complete(self.current_job, f"ERROR: {job.exit_code}")
+            except ErrorReturnCode: # When hashcat encounters an error that must be reported to dev
+                self.job_complete(self.current_job, f"ERROR: {job_as_command.exit_code}")
                 self.reset_job()
-            except sh.SignalException_SIGSGV:
+            except SignalException_SIGSEGV:
                 print("Error: Hashcat encountered a fatal error")
                 self.job_complete(self.current_job, "ERROR: Hashcat encountered a fatal error")
                 self.reset_job()
