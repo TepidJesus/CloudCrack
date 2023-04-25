@@ -87,7 +87,9 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
             except sh.ErrorReturnCode: # When hashcat encounters an error that must be reported to dev
                 self.job_complete(self.current_job, f"ERROR: {job.exit_code}")
             except Exception as e:
-                print(e)
+                print("Error: Failed to run job")
+                self.job_complete(self.current_job, "ERROR: Unknown error")
+                return
                
         def process_output(self, line):
             try:
