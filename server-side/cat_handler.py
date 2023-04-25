@@ -83,6 +83,7 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
                                             '-w4', "--status", "--quiet", "--status-json", _bg=True, 
                                             _out=self.process_output, _ok_code=[0,1])
                     self.process = job_as_command
+                    job_as_command.wait()
                 else:
                     print("Invalid attack mode")
                     return
