@@ -336,7 +336,7 @@ class AwsController:
                                     aws_secret_access_key=aws_secret_access_key, 
                                     region_name='us-east-2')
         else:
-            session = boto3.Session(region_name='us-east-2') # Should pull credentials from the Ec2 metadata service
+            session = boto3.Session(region_name='us-east-2')
         return session
     
     def get_vCPU_limit(self):
@@ -380,6 +380,16 @@ class AwsController:
             else:
                 print(f"Error: Failed to send {message_type} to the queue.")
             return False
+        
+    def locate_queue(self, name):
+        sqs = self.session.resource('sqs')
+        try:
+            queue = sqs.get_queue_by_name(QueueName=name + ".fifo")
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'AWS.SimpleQueueService.NonExistentQueue':
+                print(f"Error: Failed to locate queue: {name}.fifo")
+                return
+        return queue
     
     def create_instances(self):
         instance_recomendation = self.get_recomended_instance_type()
@@ -388,7 +398,7 @@ class AwsController:
             instances = ec2.create_instances(ImageId=self.config["image_id"], 
                                             MinCount=instance_recomendation[1], 
                                             MaxCount=instance_recomendation[1], 
-                                            InstanceType=instance_recomendation[0])
+                                            InstanceType=instance_recomendation[0]) ##TODO: Make IAM role and assign to instances
         except ClientError as e:
             if e.response['Error']['Code'] == 'InsufficientInstanceCapacity':
                 print("Error: Failed to create instances. Looks like those pesky ML engineers are using all the GPU instances.")

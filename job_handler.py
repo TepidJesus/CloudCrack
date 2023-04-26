@@ -1,5 +1,6 @@
 import json
 from enum import Enum, IntEnum
+import time
 ### HashCat Command Format: hashcat -a <attack_mode> -m <hash_type> <hash> <wordlist/mask/length> -w 4
 
 class STATUS(IntEnum):
@@ -38,6 +39,15 @@ class JobHandler:
             self.outbound_queue = self.aws_controller.create_queue('deliveryQueue')
             self.control_queue = self.aws_controller.create_queue('controlQueue')
             self.inbound_queue = self.aws_controller.create_queue('returnQueue')
+        else:
+            for retry in range(5):
+                self.outbound_queue = self.aws_controller.locate_queue('deliveryQueue')
+                if self.outbound_queue is not None:
+                    break
+                time.sleep(5)
+            if self.outbound_queue is None:
+                print("Error: Failed to locate outbound queue. Exiting...")
+                exit(1)
         
         self.available_instances = []
         self.wordlist_bucket_name = None
