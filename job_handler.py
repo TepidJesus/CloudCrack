@@ -41,8 +41,9 @@ class JobHandler:
             self.inbound_queue = self.aws_controller.create_queue('returnQueue')
         else:
             for retry in range(5):
-                self.outbound_queue = self.aws_controller.locate_queue('deliveryQueue')
+                self.outbound_queue = self.aws_controller.locate_queue('returnQueue')
                 if self.outbound_queue is not None:
+                    print("Located outbound queue")
                     break
                 time.sleep(5)
             if self.outbound_queue is None:

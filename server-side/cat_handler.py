@@ -76,7 +76,7 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
                         return
                     job_as_command = hashcat(f'-a0', f'-m{job.hash_type}', job.hash, wrdlst, 
                                             '-w4', "--status", "--quiet", "--status-json", _bg=True, 
-                                            _out=self.process_output, _ok_code=[0,1])
+                                            _out=self.process_output, _err=self.process_unknown_failure, _ok_code=[0,1])
                     self.process = job_as_command                           
                 elif job.attack_mode == "3":
                     job_as_command = hashcat(f'-a3', f'-m{job.hash_type}', job.hash, job.required_info, 
@@ -121,7 +121,7 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
             return True      
 
         def report_progress(self, current, total):
-            self.aws_controller.send_message(json.dumps({"job_id": self.current_job.job_id, 
+            self.aws_controller.send_message(self.outbound_queue, json.dumps({"job_id": self.current_job.job_id, 
                                                                     "current": current, 
                                                                     "total": total}), 
                                                                     "Status")
@@ -145,4 +145,4 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
 
         def return_job(self, job):
             print("Returning job")
-            self.outbound_queue.send_message(MessageBody=job.to_json(), MessageGroupId="Job")
+            self.aws_controller.send_message(self.outbound_queue, job.to_json(), "Job")
