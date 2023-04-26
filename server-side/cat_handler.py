@@ -118,10 +118,10 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
             
 
         def report_progress(self, current, total):
-            self.outbound_queue.send_message(MessageBody=json.dumps({"job_id": self.current_job.job_id, 
+            self.aws_controller.send_message(json.dumps({"job_id": self.current_job.job_id, 
                                                                     "current": current, 
                                                                     "total": total}), 
-                                                                    MessageGroupId="Status")
+                                                                    "Status")
  
         def job_complete(self, job, result):
             if result == "EXHAUSTED":
