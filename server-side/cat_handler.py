@@ -81,7 +81,7 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
                 elif job.attack_mode == "3":
                     job_as_command = hashcat(f'-a3', f'-m{job.hash_type}', job.hash, job.required_info, 
                                             '-w4', "--status", "--quiet", "--status-json", _bg=True, 
-                                            _out=self.process_output, _ok_code=[0,1])
+                                            _out=self.process_output, _err=self.process_unknown_failure, _ok_code=[0,1])
                     self.process = job_as_command
                 else:
                     print("Invalid attack mode")
@@ -115,7 +115,10 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
                 self.job_complete(self.current_job, line.split(":")[1].strip('\n'))
                 return True
 
-            
+        def process_unknown_failure(self, line):
+            print("Unknown failure")
+            self.job_complete(self.current_job, "ERROR: Unknown error")
+            return True      
 
         def report_progress(self, current, total):
             self.aws_controller.send_message(json.dumps({"job_id": self.current_job.job_id, 
