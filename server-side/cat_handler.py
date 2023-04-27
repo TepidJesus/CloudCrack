@@ -121,7 +121,7 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
             return True      
 
         def report_progress(self, current, total):
-            self.aws_controller.send_message(self.outbound_queue, json.dumps({"job_id": self.current_job.job_id, 
+            self.aws_controller.message_queue(self.outbound_queue, json.dumps({"job_id": self.current_job.job_id, 
                                                                     "current": current, 
                                                                     "total": total}), 
                                                                     "Status")
@@ -145,4 +145,4 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
 
         def return_job(self, job):
             print("Returning job")
-            self.aws_controller.send_message(self.outbound_queue, job.to_json(), "Job")
+            self.aws_controller.message_queue(self.outbound_queue, job.to_json(), "Job")
