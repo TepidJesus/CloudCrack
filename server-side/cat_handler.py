@@ -45,7 +45,7 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
 
         def get_wordlist(self, bucket_name, file_name):
             try:
-                self.s3_client.download_file(bucket_name, "UsersWordlist", file_name)
+                self.s3_client.download_file(bucket_name, file_name, "UsersWordlist")
             except Exception as e:
                 print(f"Error: Failed to download wordlist from S3 bucket {bucket_name}. Continuing...")
                 return None
