@@ -430,6 +430,13 @@ class AwsController:
             return False
         return True
     
+    def download_file(self, bucket_name, file_name, local_name):
+        try:
+            self.session.client('s3').download_file(bucket_name, file_name, local_name)
+            return local_name
+        except ClientError as e:
+            print("Error: Failed to download file. Please check your AWS credentials and try again.")
+    
     def create_bucket_name(self, bucket_prefix):
         return ''.join([bucket_prefix, str(uuid.uuid4())])
     
