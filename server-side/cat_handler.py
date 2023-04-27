@@ -69,7 +69,7 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
             print("Job started")
 
             try:
-                if job.attack_mode == "0":
+                if job.attack_mode == 0:
                     wrdlst = self.get_wordlist(job.required_info[1], job.required_info[0]) # Need to add failure handling to return job as failed
                     if wrdlst is None:
                         self.job_complete(self.current_job, "ERROR: Failed to download wordlist from S3 bucket")
@@ -78,13 +78,15 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
                                             '-w4', "--status", "--quiet", "--status-json", _bg=True, 
                                             _out=self.process_output, _err=self.process_unknown_failure, _ok_code=[0,1])
                     self.process = job_as_command                           
-                elif job.attack_mode == "3":
+                elif job.attack_mode == 3:
                     job_as_command = hashcat(f'-a3', f'-m{job.hash_type}', job.hash, job.required_info, 
                                             '-w4', "--status", "--quiet", "--status-json", _bg=True, 
                                             _out=self.process_output, _err=self.process_unknown_failure, _ok_code=[0,1])
                     self.process = job_as_command
                 else:
                     print("Invalid attack mode")
+                    self.job_complete(self.current_job, "ERROR: Invalid attack mode")
+                    self.reset_job()
                     return
                 
             except ErrorReturnCode: # When hashcat encounters an error that must be reported to dev

@@ -9,11 +9,10 @@ import time
 import uuid
 
 ## Problems:
-# - No status response after reciever crashes
 
-## TODO: Make an AWS handler class that handles all AWS interactions to abstract away the boto3 API
 ## TODO: Finish settings menu and add a way to change settings and save them to the config fil
 ## TODO: Potentially add a seperate control queue for each Ec2 hashing instance
+## TODO: Make it so client doens't cry if the queues already exist when it tries to create them
 
 class ClientController:
 
@@ -174,7 +173,7 @@ class ClientController:
                 if attack_mode == "":
                     print("You must provide an attack mode")
                     continue
-                if attack_mode == 0 and not self.valid_mask(mask):
+                if attack_mode == 3 and not self.valid_mask(mask):
                     print("Invalid mask. See the HashCat wiki for help")
                     continue
                 
@@ -420,10 +419,10 @@ class AwsController:
                                       CreateBucketConfiguration={'LocationConstraint': "us-east-2"})
         except:
             print("Error: Failed to create bucket. Please check your AWS credentials and try again.") ## TODO: NEED MORE SPECIFIC ERROR HANDLING
-            return False
+            return False ## TODO: Raise exception instead of returning False
         return bucket_name
     
-    def upload_file(self, bucket_name, file_path, file_name):
+    def upload_file(self, file_path, bucket_name, file_name):
         try:
             self.session.client('s3').upload_file(file_path, bucket_name, file_name)
         except ClientError as e:
