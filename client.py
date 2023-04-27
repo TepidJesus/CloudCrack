@@ -144,11 +144,11 @@ class ClientController:
                         continue
                     else:
                         if input_as_list[2].lower() == "dictionary":
-                            attack_mode = "0"
+                            attack_mode = 0
                         elif input_as_list[2].lower() == "mask":
-                            attack_mode = "3"
+                            attack_mode = 3
                         else:
-                            attack_mode = input_as_list[2].strip()
+                            attack_mode = int(input_as_list[2].strip())
                 elif input_as_list[1].lower() == "mask":
                     mask = input_as_list[2].strip()
                 elif input_as_list[1].lower() == "dictionary":
@@ -159,10 +159,10 @@ class ClientController:
                     hash_file_location = input_as_list[2].strip()
 
             if input_as_list[0].lower() in ["run", "start", "create"]:
-                if dictionary == "" and attack_mode == "0":
+                if dictionary == "" and attack_mode == 0:
                     print("You must provide a dictionary for attack mode 0")
                     continue
-                if mask == "" and attack_mode == "3":
+                if mask == "" and attack_mode == 3:
                     print("You must provide a mask for attack mode 3")
                     continue
                 if _hash == "" and hash_file_location == "":
@@ -174,7 +174,7 @@ class ClientController:
                 if attack_mode == "":
                     print("You must provide an attack mode")
                     continue
-                if not self.valid_mask(mask):
+                if attack_mode == 0 and not self.valid_mask(mask):
                     print("Invalid mask. See the HashCat wiki for help")
                     continue
                 
@@ -427,7 +427,7 @@ class AwsController:
         try:
             self.session.client('s3').upload_file(file_path, bucket_name, file_name)
         except ClientError as e:
-            print("Error: Failed to upload file. Please check your AWS credentials and try again.")
+            print("Error: Failed to upload file. Please check your AWS credentials and try again.") ## TODO: NEED MORE SPECIFIC ERROR HANDLING
             return False
         return True
     

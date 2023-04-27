@@ -59,8 +59,8 @@ class JobHandler:
     def send_job(self, job):
         job.job_status = STATUS.QUEUED
         if job.required_info is not None and job.attack_mode == 0:
-            if self.wordlist_bucket is None:
-                self.wordlist_bucket = self.aws_controller.create_bucket("wordlist-bucket")
+            if self.wordlist_bucket_name is None:
+                self.wordlist_bucket_name = self.aws_controller.create_bucket("wordlist-bucket")
             file_name = self.get_file_name(job.required_info)
             response = self.aws_controller.upload_file(job.required_info, self.wordlist_bucket_name, file_name)
             if response == False:
