@@ -47,9 +47,10 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
             try:
                 self.s3_client.download_file(bucket_name, file_name, "UsersWordlist")
             except Exception as e:
+                print(e) ## DEBUG
                 print(f"Error: Failed to download wordlist from S3 bucket {bucket_name}. Continuing...")
                 return None
-            return os.getcwd() + "/" + file_name + ".txt"
+            return os.getcwd() + "/" + "UsersWordlist.txt"
 
     
         def check_for_response(self):
