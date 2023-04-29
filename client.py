@@ -402,7 +402,7 @@ class AwsController:
             if e.response['Error']['Code'] == 'InsufficientInstanceCapacity':
                 print("Error: Failed to create instances. Looks like those pesky ML engineers are using all the GPU instances.")
                 if len(instances) == 0:
-                    print("Please try again later or try a different region. (Specify this in the settings menu)")
+                    print("Please try again later or try a different region. (Specify this in config.json file)")
                 else:
                     print(f"Only Secured {len(instances)}. You can continue with this number of instances, but you will experience decreased performance.")
                     print("You can also try again later or try a different region. (Specify this in the settings menu)")
@@ -435,6 +435,7 @@ class AwsController:
             self.session.client('s3').download_file(bucket_name, file_name, local_name)
             return local_name
         except ClientError as e:
+            print(e)
             print("Error: Failed to download file. Please check your AWS credentials and try again.")
     
     def create_bucket_name(self, bucket_prefix):
