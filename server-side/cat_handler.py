@@ -91,6 +91,7 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
                 self.reset_job()
                 return
             except Exception as e:
+                print(e) ## DEBUG
                 print("Error: Failed to run job")
                 self.job_complete(self.current_job, "ERROR: Unknown error")
                 self.reset_job()
@@ -111,6 +112,7 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
                 return True
 
         def process_unknown_failure(self, line):
+            print(line)
             print("Unknown failure")
             self.job_complete(self.current_job, "ERROR: Unknown error")
             return True      
