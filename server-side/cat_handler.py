@@ -45,12 +45,12 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
 
         def get_wordlist(self, bucket_name, file_name):
             try:
-                local_name = self.aws_controller.download_file(bucket_name, file_name, "UsersWordlist")
+                local_name = self.aws_controller.download_file(bucket_name, file_name, "UsersWordlist.txt")
             except Exception as e:
                 print(e) ## DEBUG
                 print(f"Error: Failed to download wordlist from S3 bucket {bucket_name}. Continuing...")
                 return None
-            return os.getcwd() + "/" + local_name + ".txt"
+            return os.getcwd() + "/" + local_name
     
         def run_job(self, job):
             if self.current_job is not None:
