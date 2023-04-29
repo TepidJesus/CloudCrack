@@ -51,14 +51,6 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
                 print(f"Error: Failed to download wordlist from S3 bucket {bucket_name}. Continuing...")
                 return None
             return os.getcwd() + "/" + local_name + ".txt"
-
-    
-        def check_for_response(self):
-            messages = self.inbound_queue.receive_messages(MaxNumberOfMessages=1)
-            if len(messages) > 0:
-                return messages
-            else:
-                return None
     
         def run_job(self, job):
             if self.current_job is not None:
