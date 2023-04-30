@@ -30,6 +30,8 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
                 self.process.kill()
             except SignalException_SIGKILL: # When job is cancelled
                 self.job_complete(self.current_job, "CANCELLED")
+            except ProcessLookupError:
+                self.job_complete(self.current_job, "CANCELLED")
             
             job_tmp = self.current_job
             self.reset_job()
@@ -67,15 +69,13 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
                     if wrdlst is None:
                         self.job_complete(self.current_job, "ERROR: Failed to download wordlist from S3 bucket")
                         return
-                    job_as_command = hashcat(f'-a0', f'-m{job.hash_type}', job.hash, wrdlst, 
-                                            '-w4', "--status", "--quiet", "--status-json", _bg=True, 
-                                            _out=self.process_output, _err=self.process_unknown_failure, _ok_code=[0,1])
-                    self.process = job_as_command                           
+                    self.process = hashcat(f'-a0', f'-m{job.hash_type}', job.hash, wrdlst, 
+                                            '-w4', "--status", "--status-json", _bg=True, 
+                                            _out=self.process_output, _err=self.process_unknown_failure, _ok_code=[0,1])                         
                 elif job.attack_mode == 3:
-                    job_as_command = hashcat(f'-a3', f'-m{job.hash_type}', job.hash, job.required_info, 
-                                            '-w4', "--status", "--quiet", "--status-json", _bg=True, 
+                    self.process = hashcat(f'-a3', f'-m{job.hash_type}', job.hash, job.required_info, 
+                                            '-w4', "--status", "--status-json", _bg=True, 
                                             _out=self.process_output, _err=self.process_unknown_failure, _ok_code=[0,1])
-                    self.process = job_as_command
                 else:
                     print("Invalid attack mode")
                     self.job_complete(self.current_job, "ERROR: Invalid attack mode")
@@ -118,6 +118,7 @@ class HashcatHandler(JobHandler): #TODO: Seperate this class from the JobHandler
             return True      
 
         def report_progress(self, current, total):
+            print(f"Progress: {current}/{total}") ## DEBUG
             self.aws_controller.message_queue(self.outbound_queue, json.dumps({"job_id": self.current_job.job_id, 
                                                                     "current": current, 
                                                                     "total": total}), 
