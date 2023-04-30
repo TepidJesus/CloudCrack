@@ -14,6 +14,10 @@ import uuid
 ## TODO: Potentially add a seperate control queue for each Ec2 hashing instance
 ## TODO: Make it so client doens't cry if the queues already exist when it tries to create them
 
+#### Tuesday TO DO ####
+## TODO: Create IAM Role for EC2 Instance
+## TODO: EC2 Instance Creation, IAM Role Assignemnt
+
 class ClientController:
 
     def __init__(self):
@@ -63,6 +67,8 @@ class ClientController:
                         self.job_handler.cancel_job(job_id)
                     except:
                         print("Invalid Job ID")
+            else:
+                print("Unknown Command -- Type 'help' for a list of commands")
         
 
     def print_welcome(self):
@@ -156,10 +162,12 @@ class ClientController:
                     output_file = input_as_list[2].strip()
                 elif input_as_list[1].lower() == "hashes":
                     hash_file_location = input_as_list[2].strip()
+                else:
+                    print("Invalid option -- Type 'help' for a list of options")
 
             if input_as_list[0].lower() in ["run", "start", "create"]:
-                if dictionary == "" and attack_mode == 0:
-                    print("You must provide a dictionary for attack mode 0")
+                if dictionary == "" and attack_mode == 0: 
+                    print("You must provide a dictionary for attack mode 0") 
                     continue
                 if mask == "" and attack_mode == 3:
                     print("You must provide a mask for attack mode 3")
@@ -178,11 +186,18 @@ class ClientController:
                     continue
                 
                 if dictionary != "":
-                    required_info = dictionary
+                    try:
+                        with open(dictionary, "r") as file:
+                            required_info = dictionary
+                            pass
+                    except:
+                        print("Failed to open dictionary file. Please check the file location and try again")
+                        continue
+           
                 elif mask != "":
                     required_info = mask
                 
-                if hash_file_location != "":
+                if hash_file_location != "": 
                     try:
                         with open(hash_file_location, "r") as file:
                             pass

@@ -75,6 +75,7 @@ class JobHandler:
             job.job_status = STATUS.FAILED
             return
         else:
+            print(f"Job {job.job_id} sent to queue.")
             self.job_log[job.job_id] = job ## TODO: need to move a way from using receipt handle. Consider moving away from FIFO queues
  
     
