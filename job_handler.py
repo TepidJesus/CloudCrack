@@ -116,9 +116,10 @@ class JobHandler:
         return self.job_log[job.job_id].job_status
 
     def check_for_response(self):
-        inboundMessages = self.inbound_queue.receive_messages(MaxNumberOfMessages=10)
+        inboundMessages = self.inbound_queue.receive_messages(MaxNumberOfMessages=10) ## TODO: Make AWScontroller method
 
         if len(inboundMessages) > 0:
+            print(f"received {len(inboundMessages)} new inbound messages") ## DEBUG
             for message in inboundMessages:
                 try:
                     job = self.load_from_json(message.body)
