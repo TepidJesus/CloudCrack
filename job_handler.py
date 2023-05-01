@@ -50,7 +50,6 @@ class JobHandler:
                 print("Error: Failed to locate outbound queue. Exiting...")
                 exit(1)
         
-        self.available_instances = []
         self.wordlist_bucket_name = None
         self.job_log = {}
         self.job_id = 1 
@@ -69,6 +68,8 @@ class JobHandler:
                 return
             
             job.required_info = (file_name, self.wordlist_bucket_name)
+        if self.aws_controller.get_num_instances() < self.aws_controller.get_max_instances():
+            self.aws_controller.create_instance()
         response = self.aws_controller.message_queue(self.outbound_queue, job.to_json(), "Job")
         if response == False:
             print(f"Error: Failed to send job {job.job_id} to queue. Continuing...")

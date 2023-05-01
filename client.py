@@ -17,6 +17,7 @@ import uuid
 #### Tuesday TO DO ####
 ## TODO: Create IAM Role for EC2 Instance
 ## TODO: EC2 Instance Creation, IAM Role Assignemnt
+## TODO: Add EC2 auto start and stop based on load
 
 class ClientController:
 
@@ -132,7 +133,7 @@ class ClientController:
                 print("Options:")
                 print("Hash: " + _hash)
                 print("Hash Type: " + hash_type)
-                print("Attack Mode: " + attack_mode)
+                print("Attack Mode: " + str(attack_mode))
                 print("Mask: " + mask)
                 print("Dictionary: " + dictionary)
                 print("Output File (Optional): " + output_file)
@@ -276,6 +277,7 @@ class AwsController:
             self.session = None
             self.config = config
             self.instances = []
+            
             if mode == "client":
                 if self.test_ec2(self.credentialManager.get_aws_access_key_id(), self.credentialManager.get_aws_secret_access_key()):
                     self.session = self.get_session("client")
@@ -285,6 +287,7 @@ class AwsController:
                     exit()
                 
                 self.effective_vCPU_limit = self.get_vCPU_limit() * int(self.config["AWS-Settings"]["usage_limit"])
+                self.instance_config = self.get_instance_config()
             elif mode == "server":
                 self.session = self.get_session("server")
 
@@ -405,26 +408,24 @@ class AwsController:
                 return
         return queue
     
-    def create_instances(self):
-        instance_recomendation = self.get_recomended_instance_type()
+    def create_instance(self):
         ec2 = self.session.resource('ec2')
         try:
-            instances = ec2.create_instances(ImageId=self.config["image_id"], 
-                                            MinCount=instance_recomendation[1], 
-                                            MaxCount=instance_recomendation[1], 
-                                            InstanceType=instance_recomendation[0]) ##TODO: Make IAM role and assign to instances
+            instance = ec2.create_instances(ImageId=self.config["image_id"], 
+                                            MinCount=1, 
+                                            MaxCount=1, 
+                                            InstanceType=self.instance_config[0]) ##TODO: Make IAM role and assign to instances
         except ClientError as e:
             if e.response['Error']['Code'] == 'InsufficientInstanceCapacity':
                 print("Error: Failed to create instances. Looks like those pesky ML engineers are using all the GPU instances.")
-                if len(instances) == 0:
+                if len(instance) == 0:
                     print("Please try again later or try a different region. (Specify this in config.json file)")
                 else:
-                    print(f"Only Secured {len(instances)}. You can continue with this number of instances, but you will experience decreased performance.")
+                    print(f"Only Secured {self.get_num_instances()}. You can continue with this number of instances, but you will experience decreased performance.")
                     print("You can also try again later or try a different region. (Specify this in the settings menu)")
 
-        self.instances = self.instances + instances
+        self.instances.append(instance)
 
-        return instances
     
     def create_bucket(self, bucket_prefix):
         s3 = self.session.client('s3')
@@ -479,8 +480,13 @@ class AwsController:
         self.close_buckets()
         self.close_queues()
 
-    
-    def get_recomended_instance_type(self):
+    def get_num_instances(self):
+        return len(self.instances)
+
+    def get_max_instances(self):
+        return self.instance_config[1]
+
+    def get_recomended_instance_config(self): 
         if self.effective_vCPU_limit % 96 >=  1:
             return ("p4d.24xlarge", self.effective_vCPU_limit // 96)
         elif self.effective_vCPU_limit % 64 >= 1:
