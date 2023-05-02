@@ -414,7 +414,7 @@ class AwsController:
             instance = ec2.create_instances(ImageId=self.config["image_id"], 
                                             MinCount=1, 
                                             MaxCount=1, 
-                                            InstanceType=self.instance_config[0]) ##TODO: Make IAM role and assign to instances
+                                            InstanceType=self.instance_config[0], ) ##TODO: Make IAM role and assign to instances
         except ClientError as e:
             if e.response['Error']['Code'] == 'InsufficientInstanceCapacity':
                 print("Error: Failed to create instances. Looks like those pesky ML engineers are using all the GPU instances.")
@@ -499,6 +499,63 @@ class AwsController:
             return ("p2.xlarge", 1)
         else:
             return ("t2.micro", 1)
+        
+    def create_iam_role(self):
+        iam = boto3.client('iam')
+        trust_policy = {
+            'Version': '2012-10-17',
+            'Statement': [
+                {
+                    'Effect': 'Allow',
+                    'Principal': {'Service': 'ec2.amazonaws.com'},
+                    'Action': 'sts:AssumeRole'
+                }
+            ]
+        }
+
+        permissions_policy = {
+            'Version': '2012-10-17',
+            'Statement': [
+                {
+                    'Effect': 'Allow',
+                    'Action': [
+                        's3:Get*',
+                        's3:List*'
+                    ],
+                    'Resource': 'arn:aws:s3:::*'
+                },
+                {
+                    'Effect': 'Allow',
+                    'Action': [
+                        'sqs:*'
+                    ],
+                    'Resource': '*'
+                }
+            ]
+        }
+
+        response = iam.create_role(
+            RoleName='CloudCrack-s3-sqs-role',
+            AssumeRolePolicyDocument=str(trust_policy),
+        )
+
+        iam.put_role_policy(
+            RoleName='CloudCrack-s3-sqs-role',
+            PolicyName='s3-sqs-permissions',
+            PolicyDocument=str(permissions_policy)
+        )
+
+        role_arn = response['Role']['Arn']
+        return role_arn
+    
+    def get_iam_role(self):
+        iam = boto3.client('iam')
+        roles = iam.list_roles()
+        for role in roles['Roles']:
+            if role['RoleName'] == 'CloudCrack-s3-sqs-role':
+                return role['Arn']
+        
+        return self.create_iam_role()
         
     class CredentialManager:
 
