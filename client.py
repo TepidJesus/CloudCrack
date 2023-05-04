@@ -14,8 +14,8 @@ import uuid
 ## TODO: Potentially add a seperate control queue for each Ec2 hashing instance
 ## TODO: Make it so client doens't cry if the queues already exist when it tries to create them
 
-#### Tuesday TO DO ####
-## TODO: Create IAM Role for EC2 Instance
+#### Saturday TO DO ####
+## TODO: Add IAM priviledges to the IAM role
 ## TODO: EC2 Instance Creation, IAM Role Assignemnt
 ## TODO: Add EC2 auto start and stop based on load
 
@@ -287,7 +287,7 @@ class AwsController:
                     exit()
                 
                 self.effective_vCPU_limit = self.get_vCPU_limit() * int(self.config["AWS-Settings"]["usage_limit"])
-                self.instance_config = self.get_instance_config()
+                self.instance_config = self.get_recomended_instance_config()
             elif mode == "server":
                 self.session = self.get_session("server")
 
@@ -359,6 +359,7 @@ class AwsController:
     def get_vCPU_limit(self):
         quota_client = self.session.client('service-quotas')
         response = quota_client.get_service_quota(ServiceCode='ec2', QuotaCode='L-417A185B')
+        print(f"Your current vCPU limit is {response['Quota']['Value']}") ## DEBUG
         return int(response['Quota']['Value'])
     
     def get_instances(self):
@@ -410,11 +411,14 @@ class AwsController:
     
     def create_instance(self):
         ec2 = self.session.resource('ec2')
+        print("Creating instance...") ## DEBUG
         try:
-            instance = ec2.create_instances(ImageId=self.config["image_id"], 
+            instance = ec2.create_instances(ImageId=self.config["AWS-Settings"]["image_id"], 
                                             MinCount=1, 
                                             MaxCount=1, 
-                                            InstanceType=self.instance_config[0], ) ##TODO: Make IAM role and assign to instances
+                                            InstanceType=self.instance_config[0], 
+                                            Iam_instance_profile={'Arn': self.get_iam_role()})
+            self.instances.append(instance)
         except ClientError as e:
             if e.response['Error']['Code'] == 'InsufficientInstanceCapacity':
                 print("Error: Failed to create instances. Looks like those pesky ML engineers are using all the GPU instances.")
@@ -423,8 +427,10 @@ class AwsController:
                 else:
                     print(f"Only Secured {self.get_num_instances()}. You can continue with this number of instances, but you will experience decreased performance.")
                     print("You can also try again later or try a different region. (Specify this in the settings menu)")
+            else:
+                print(e)
 
-        self.instances.append(instance)
+        
 
     
     def create_bucket(self, bucket_prefix):
@@ -476,7 +482,7 @@ class AwsController:
             queue.delete()
 
     def cleanup(self):
-        #self.close_instances() ## DEBUG
+        self.close_instances()
         self.close_buckets()
         self.close_queues()
 
@@ -487,13 +493,13 @@ class AwsController:
         return self.instance_config[1]
 
     def get_recomended_instance_config(self): 
-        if self.effective_vCPU_limit % 96 >=  1:
+        if self.effective_vCPU_limit // 96 >=  1:
             return ("p4d.24xlarge", self.effective_vCPU_limit // 96)
-        elif self.effective_vCPU_limit % 64 >= 1:
+        elif self.effective_vCPU_limit // 64 >= 1:
             return ("p3.16xlarge", self.effective_vCPU_limit // 64)
-        elif self.effective_vCPU_limit % 32 >= 1:
+        elif self.effective_vCPU_limit // 32 >= 1:
             return ("p3.8xlarge", self.effective_vCPU_limit // 32)
-        elif self.effective_vCPU_limit % 8 >= 1:
+        elif self.effective_vCPU_limit // 8 >= 1:
             return ("p3.2xlarge", self.effective_vCPU_limit // 8)
         elif self.effective_vCPU_limit >= 4:
             return ("p2.xlarge", 1)
@@ -545,8 +551,7 @@ class AwsController:
             PolicyDocument=str(permissions_policy)
         )
 
-        role_arn = response['Role']['Arn']
-        return role_arn
+        return response['Role']['Arn']
     
     def get_iam_role(self):
         iam = boto3.client('iam')

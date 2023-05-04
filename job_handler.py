@@ -70,6 +70,8 @@ class JobHandler:
             job.required_info = (file_name, self.wordlist_bucket_name)
         if self.aws_controller.get_num_instances() < self.aws_controller.get_max_instances():
             self.aws_controller.create_instance()
+        else:
+            print("Max number of instances reached. Job queued.")
         response = self.aws_controller.message_queue(self.outbound_queue, job.to_json(), "Job")
         if response == False:
             print(f"Error: Failed to send job {job.job_id} to queue. Continuing...")
