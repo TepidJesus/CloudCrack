@@ -104,7 +104,7 @@ class JobHandler:
 
         response = self.aws_controller.message_queue(self.control_queue, Command(job_id, REQUEST.CANCEL).to_json(), "Command")
         if response == False:
-            print(f"Error: Failed to cancel job #{job_id} to queue. The job may still be running.")
+            print(f"Error: Failed to cancel job #{job_id}. The job may still be running.")
             return False
         else:
             self.job_log[job_id].job_status = STATUS.CANCELLED
