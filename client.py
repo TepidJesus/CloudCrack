@@ -417,7 +417,7 @@ class AwsController:
                                             MinCount=1, 
                                             MaxCount=1, 
                                             InstanceType=self.instance_config[0], 
-                                            Iam_instance_profile={'Arn': self.get_iam_role()})
+                                            Iam_instance_profile={'Arn': self.get_iam_role()}) ### BROKEN, IAM_instance_profile not a valid argument
             self.instances.append(instance)
         except ClientError as e:
             if e.response['Error']['Code'] == 'InsufficientInstanceCapacity':
@@ -542,13 +542,13 @@ class AwsController:
 
         response = iam.create_role(
             RoleName='CloudCrack-s3-sqs-role',
-            AssumeRolePolicyDocument=str(trust_policy),
+            AssumeRolePolicyDocument=str(json.dumps(trust_policy))
         )
 
         iam.put_role_policy(
             RoleName='CloudCrack-s3-sqs-role',
             PolicyName='s3-sqs-permissions',
-            PolicyDocument=str(permissions_policy)
+            PolicyDocument=str(json.dumps(permissions_policy))
         )
 
         return response['Role']['Arn']
