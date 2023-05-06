@@ -372,9 +372,18 @@ class AwsController:
             queue = sqs.create_queue(QueueName=queue_name + ".fifo", Attributes={'DelaySeconds': '1', 
                                                             'FifoQueue': 'true', 
                                                             'ContentBasedDeduplication': 'true'})
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'AWS.SimpleQueueService.QueueDeletedRecently':
+                print("Error: Looks like you restarted CloudCrack to quickly and made AWS mad. Please wait a 60 seconds and try again.")
+                exit()
+            elif e.response['Error']['Code'] == 'AWS.SimpleQueueService.QueueNameExists':
+                print(f"Error: Looks like you already have a queue with the name {queue_name}. If you made this queue yourself, please delete or rename it and try again.")
+                exit()
+            else:
+                print(e)
         except Exception as e:
-            print(e) ## DEBUG
             print("Error: Failed to create queue. Please check your AWS credentials and try again.")
+            print(e) ## DEBUG
             self.cleanup()
             exit()
         return queue
@@ -416,9 +425,9 @@ class AwsController:
             instance = ec2.create_instances(ImageId=self.config["AWS-Settings"]["image_id"], 
                                             MinCount=1, 
                                             MaxCount=1, 
-                                            InstanceType=self.instance_config[0], 
-                                            Iam_instance_profile={'Arn': self.get_iam_role()}) ### BROKEN, IAM_instance_profile not a valid argument
-            self.instances.append(instance)
+                                            InstanceType=self.instance_config[0])
+            ec2.associate_iam_instance_profile(IamInstanceProfile={'Arn': self.get_iam_role(), 'Name': 'CloudCrack-s3-sqs-role'}, InstanceId=instance[0].id)
+            self.instances.append(instance[0])
         except ClientError as e:
             if e.response['Error']['Code'] == 'InsufficientInstanceCapacity':
                 print("Error: Failed to create instances. Looks like those pesky ML engineers are using all the GPU instances.")
@@ -427,8 +436,12 @@ class AwsController:
                 else:
                     print(f"Only Secured {self.get_num_instances()}. You can continue with this number of instances, but you will experience decreased performance.")
                     print("You can also try again later or try a different region. (Specify this in the settings menu)")
+            elif e.response['Error']['Code'] == 'VcpuLimitExceeded':
+                return
             else:
                 print(e)
+        except Exception as e:
+            print(e)
 
         
 
@@ -509,7 +522,7 @@ class AwsController:
     def create_iam_role(self):
         iam = boto3.client('iam')
         trust_policy = {
-            'Version': '2012-10-17',
+            'Version': '2012-10-17', ## Stolen from Chat GPT
             'Statement': [
                 {
                     'Effect': 'Allow',
