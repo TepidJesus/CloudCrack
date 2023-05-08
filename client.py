@@ -420,13 +420,14 @@ class AwsController:
     
     def create_instance(self):
         ec2 = self.session.resource('ec2')
+        ec2c = self.session.client('ec2')
         print("Creating instance...") ## DEBUG
         try:
             instance = ec2.create_instances(ImageId=self.config["AWS-Settings"]["image_id"], 
                                             MinCount=1, 
                                             MaxCount=1, 
                                             InstanceType=self.instance_config[0])
-            ec2.associate_iam_instance_profile(IamInstanceProfile={'Arn': self.get_iam_role(), 'Name': 'CloudCrack-s3-sqs-role'}, InstanceId=instance[0].id)
+            ec2c.associate_iam_instance_profile(IamInstanceProfile={'Arn': self.get_iam_role(), 'Name': 'CloudCrack-s3-sqs-role'}, InstanceId=instance[0].id)
             self.instances.append(instance[0])
         except ClientError as e:
             if e.response['Error']['Code'] == 'InsufficientInstanceCapacity':
@@ -437,6 +438,7 @@ class AwsController:
                     print(f"Only Secured {self.get_num_instances()}. You can continue with this number of instances, but you will experience decreased performance.")
                     print("You can also try again later or try a different region. (Specify this in the settings menu)")
             elif e.response['Error']['Code'] == 'VcpuLimitExceeded':
+                print("VCPU Limit Exceeded") ## DEBUG
                 return
             else:
                 print(e)
