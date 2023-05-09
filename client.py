@@ -427,7 +427,7 @@ class AwsController:
                                             MinCount=1, 
                                             MaxCount=1, 
                                             InstanceType=self.instance_config[0])
-            ec2c.associate_iam_instance_profile(IamInstanceProfile={'Arn': self.get_iam_role(), 'Name': 'CloudCrack-s3-sqs-role'}, InstanceId=instance[0].id)
+            ec2c.associate_iam_instance_profile(IamInstanceProfile={'Name': 'CloudCrack-s3-sqs-role'}, InstanceId=instance[0].id)
             self.instances.append(instance[0])
         except ClientError as e:
             if e.response['Error']['Code'] == 'InsufficientInstanceCapacity':
@@ -444,8 +444,6 @@ class AwsController:
                 print(e)
         except Exception as e:
             print(e)
-
-        
 
     
     def create_bucket(self, bucket_prefix):
@@ -496,10 +494,21 @@ class AwsController:
         for queue in queues:
             queue.delete()
 
+    def remove_iam_role(self): ## TODO: Delete policies before deleting role
+        iam = self.session.client('iam')
+        roles = iam.list_roles()
+        for role in roles['Roles']:
+            if role['RoleName'] == 'CloudCrack-s3-sqs-role':
+                # remove all the policies from the role before deleting it
+                iam.delete_role(RoleName='CloudCrack-s3-sqs-role')
+                return True
+        return False
+
     def cleanup(self):
         self.close_instances()
         self.close_buckets()
         self.close_queues()
+        self.remove_iam_role()
 
     def get_num_instances(self):
         return len(self.instances)
@@ -522,7 +531,7 @@ class AwsController:
             return ("t2.micro", 1)
         
     def create_iam_role(self):
-        iam = boto3.client('iam')
+        iam = self.session.client('iam')
         trust_policy = {
             'Version': '2012-10-17', ## Stolen from Chat GPT
             'Statement': [
@@ -566,14 +575,21 @@ class AwsController:
             PolicyDocument=str(json.dumps(permissions_policy))
         )
 
-        return response['Role']['Arn']
+        return str(response['Role'])
+    
+    def create_instance_profile(self):
+        iam = self.session.client('iam')
+        response = iam.create_instance_profile(InstanceProfileName='CloudCrack-s3-sqs-instance-profile')
+        iam_role_name = self.get_iam_role()['RoleName']
+        iam.add_role_to_instance_profile(InstanceProfileName='CloudCrack-s3-sqs-instance-profile', RoleName=iam_role_name)
+        return response['InstanceProfile']['Arn']
     
     def get_iam_role(self):
-        iam = boto3.client('iam')
+        iam = self.session.client('iam')
         roles = iam.list_roles()
         for role in roles['Roles']:
             if role['RoleName'] == 'CloudCrack-s3-sqs-role':
-                return role['Arn']
+                return role
         
         return self.create_iam_role()
         
