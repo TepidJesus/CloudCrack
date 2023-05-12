@@ -1,7 +1,6 @@
 from job_handler import JobHandler, STATUS
 import boto3
 from botocore.exceptions import ClientError
-from botocore.credentials import InstanceMetadataFetcher
 import json
 import dotenv
 import os
@@ -329,10 +328,10 @@ class AwsController:
     def test_sqs(self):
         try:
             sqs = self.session.resource('sqs')
-            sqs.create_queue(QueueName="test.fifo", Attributes={'DelaySeconds': '1', 
+            queue = sqs.create_queue(QueueName="test.fifo", Attributes={'DelaySeconds': '1', 
                                                             'FifoQueue': 'true', 
                                                             'ContentBasedDeduplication': 'true'})
-            self.close_queues()
+            queue.delete()
             return True
         except ClientError as e:
             if e.response['Error']['Code'] == 'AccessDenied':
@@ -341,6 +340,7 @@ class AwsController:
                 return False
             else:
                 print(e)
+
 
         print("SQS Test Error") ## DEBUG
         return False
@@ -493,6 +493,7 @@ class AwsController:
         sqs = self.session.resource('sqs')
         queues = sqs.queues.all()
         for queue in queues:
+            print(f"Deleting queue: {queue.url}") ## DEBUG
             queue.delete()
 
     def remove_iam_role(self): ## TODO: Delete policies before deleting role
@@ -500,17 +501,21 @@ class AwsController:
         roles = iam.list_roles()
         for role in roles['Roles']:
             if role['RoleName'] == 'CloudCrack-s3-sqs-role':
-                # remove all the policies from the role before deleting it
+                iam.delete_role_policy(RoleName='CloudCrack-s3-sqs-role', PolicyName='s3-sqs-permissions')
                 iam.delete_role(RoleName='CloudCrack-s3-sqs-role')
                 return True
         return False
+    
     
     def remove_instance_profile(self):
         iam = self.session.client('iam')
         profiles = iam.list_instance_profiles()
         for profile in profiles['InstanceProfiles']:
             if profile['InstanceProfileName'] == 'CloudCrack-s3-sqs-instance-profile':
-                iam.remove_role_from_instance_profile(InstanceProfileName='CloudCrack-s3-sqs-instance-profile', RoleName='CloudCrack-s3-sqs-role')
+                try:
+                    iam.remove_role_from_instance_profile(InstanceProfileName='CloudCrack-s3-sqs-instance-profile', RoleName='CloudCrack-s3-sqs-role')
+                except:
+                    pass
                 iam.delete_instance_profile(InstanceProfileName='CloudCrack-s3-sqs-instance-profile')
                 return True
         return False
@@ -587,7 +592,7 @@ class AwsController:
             PolicyDocument=str(json.dumps(permissions_policy))
         )
 
-        return str(response['Role'])
+        return response['Role']
     
     def create_instance_profile(self): ## TODO: Ensure this works
         iam = self.session.client('iam')
@@ -595,10 +600,11 @@ class AwsController:
             response = iam.create_instance_profile(InstanceProfileName='CloudCrack-s3-sqs-instance-profile')
             iam_role_name = self.get_iam_role()['RoleName']
             iam.add_role_to_instance_profile(InstanceProfileName='CloudCrack-s3-sqs-instance-profile', RoleName=iam_role_name)
+            return response['InstanceProfile']['Arn']
         except ClientError as e: ##TODO: Add more specific error handling
                 print(e)
-        return response['InstanceProfile']['Arn']
-    
+                raise(e) # TODO: Fix this Anti-Pattern
+           
     def get_iam_role(self):
         iam = self.session.client('iam')
         roles = iam.list_roles()
