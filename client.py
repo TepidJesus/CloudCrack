@@ -600,6 +600,7 @@ class AwsController:
             response = iam.create_instance_profile(InstanceProfileName='CloudCrack-s3-sqs-instance-profile')
             iam_role_name = self.get_iam_role()['RoleName']
             iam.add_role_to_instance_profile(InstanceProfileName='CloudCrack-s3-sqs-instance-profile', RoleName=iam_role_name)
+            time.sleep(5)
             return response['InstanceProfile']['Arn']
         except ClientError as e: ##TODO: Add more specific error handling
                 print(e)
