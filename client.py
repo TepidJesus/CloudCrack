@@ -277,6 +277,7 @@ class AwsController:
             self.session = None
             self.config = config
             self.instances = []
+            self.instance_profile = None
             
             if mode == "client":
                 if self.test_ec2(self.credentialManager.get_aws_access_key_id(), self.credentialManager.get_aws_secret_access_key()):
@@ -420,14 +421,14 @@ class AwsController:
     
     def create_instance(self):
         ec2 = self.session.resource('ec2')
-        ec2c = self.session.client('ec2')
         print("Creating instance...") ## DEBUG
+        if self.instance_profile is None:
+            self.instance_profile = self.create_instance_profile()
         try:
             instance = ec2.create_instances(ImageId=self.config["AWS-Settings"]["image_id"], 
                                             MinCount=1, 
                                             MaxCount=1, 
-                                            InstanceType=self.instance_config[0])
-            ec2c.associate_iam_instance_profile(IamInstanceProfile={'Name': 'CloudCrack-s3-sqs-role'}, InstanceId=instance[0].id)
+                                            InstanceType=self.instance_config[0], IamInstanceProfile={'Arn': self.instance_profile})
             self.instances.append(instance[0])
         except ClientError as e:
             if e.response['Error']['Code'] == 'InsufficientInstanceCapacity':
@@ -503,11 +504,22 @@ class AwsController:
                 iam.delete_role(RoleName='CloudCrack-s3-sqs-role')
                 return True
         return False
+    
+    def remove_instance_profile(self):
+        iam = self.session.client('iam')
+        profiles = iam.list_instance_profiles()
+        for profile in profiles['InstanceProfiles']:
+            if profile['InstanceProfileName'] == 'CloudCrack-s3-sqs-instance-profile':
+                iam.remove_role_from_instance_profile(InstanceProfileName='CloudCrack-s3-sqs-instance-profile', RoleName='CloudCrack-s3-sqs-role')
+                iam.delete_instance_profile(InstanceProfileName='CloudCrack-s3-sqs-instance-profile')
+                return True
+        return False
 
     def cleanup(self):
         self.close_instances()
         self.close_buckets()
         self.close_queues()
+        self.remove_instance_profile()
         self.remove_iam_role()
 
     def get_num_instances(self):
@@ -577,11 +589,14 @@ class AwsController:
 
         return str(response['Role'])
     
-    def create_instance_profile(self):
+    def create_instance_profile(self): ## TODO: Ensure this works
         iam = self.session.client('iam')
-        response = iam.create_instance_profile(InstanceProfileName='CloudCrack-s3-sqs-instance-profile')
-        iam_role_name = self.get_iam_role()['RoleName']
-        iam.add_role_to_instance_profile(InstanceProfileName='CloudCrack-s3-sqs-instance-profile', RoleName=iam_role_name)
+        try:
+            response = iam.create_instance_profile(InstanceProfileName='CloudCrack-s3-sqs-instance-profile')
+            iam_role_name = self.get_iam_role()['RoleName']
+            iam.add_role_to_instance_profile(InstanceProfileName='CloudCrack-s3-sqs-instance-profile', RoleName=iam_role_name)
+        except ClientError as e: ##TODO: Add more specific error handling
+                print(e)
         return response['InstanceProfile']['Arn']
     
     def get_iam_role(self):
