@@ -577,6 +577,13 @@ class AwsController:
                         'sqs:*'
                     ],
                     'Resource': '*'
+                },
+                {
+                    'Effect': 'Allow',
+                    'Action': [
+                        'ec2:*'
+                    ],
+                    'Resource': '*'
                 }
             ]
         }
