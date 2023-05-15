@@ -506,7 +506,12 @@ class AwsController:
                 return True
         return False
     
-    
+    def remove_instance(self, instance_id):
+        for instance in self.instances:
+            if instance.id == instance_id:
+                self.instances.remove(instance)
+                break
+            
     def remove_instance_profile(self):
         iam = self.session.client('iam')
         profiles = iam.list_instance_profiles()
