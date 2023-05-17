@@ -507,10 +507,12 @@ class AwsController:
         return False
     
     def remove_instance(self, instance_id):
+        print("Removing instance: " + instance_id) ## DEBUG
         for instance in self.instances:
             if instance.id == instance_id:
                 self.instances.remove(instance)
                 break
+        print(self.instances) ## DEBUG
             
     def remove_instance_profile(self):
         iam = self.session.client('iam')
