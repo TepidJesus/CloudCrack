@@ -13,11 +13,6 @@ import uuid
 ## TODO: Potentially add a seperate control queue for each Ec2 hashing instance
 ## TODO: Make it so client doens't cry if the queues already exist when it tries to create them
 
-#### Saturday TO DO ####
-## TODO: Add IAM priviledges to the IAM role
-## TODO: EC2 Instance Creation, IAM Role Assignemnt
-## TODO: Add EC2 auto start and stop based on load
-
 class ClientController:
 
     def __init__(self):
@@ -415,7 +410,7 @@ class AwsController:
             queue = sqs.get_queue_by_name(QueueName=name + ".fifo")
         except ClientError as e:
             if e.response['Error']['Code'] == 'AWS.SimpleQueueService.NonExistentQueue':
-                print(f"Error: Failed to locate queue: {name}.fifo")
+                print(f"Error: Failed to locate queue: {name}.fifo") ## DEBUG
                 return
         return queue
     
@@ -595,16 +590,27 @@ class AwsController:
             ]
         }
 
-        response = iam.create_role(
-            RoleName='CloudCrack-s3-sqs-role',
-            AssumeRolePolicyDocument=str(json.dumps(trust_policy))
-        )
+        try:
+            response = iam.create_role(
+                RoleName='CloudCrack-s3-sqs-role',
+                AssumeRolePolicyDocument=str(json.dumps(trust_policy))
+            )
 
-        iam.put_role_policy(
-            RoleName='CloudCrack-s3-sqs-role',
-            PolicyName='s3-sqs-permissions',
-            PolicyDocument=str(json.dumps(permissions_policy))
-        )
+            iam.put_role_policy(
+                RoleName='CloudCrack-s3-sqs-role',
+                PolicyName='s3-sqs-permissions',
+                PolicyDocument=str(json.dumps(permissions_policy))
+            )
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'AccessDenied':
+                print("Error: IAM Permission Test FAILED. Please make sure you have the correct permissions enabled for your IAM user.")
+                print("You can find the required permissions in the setup guide in the README.md file.")
+                return False
+            elif e.response['Error']['Code'] == 'EntityAlreadyExists':
+                pass
+            else:
+                print(e) ## DEBUG
+                return False
 
         return response['Role']
     
