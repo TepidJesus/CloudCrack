@@ -5,7 +5,7 @@ import dotenv
 from cat_handler import HashcatHandler
 import sys
 sys.path.insert(0, "../")
-from job_handler import STATUS, REQUEST
+from job_handler import REQUEST
 import json
 from client import AwsController
 import requests
@@ -79,7 +79,7 @@ def main():
                     print(job.to_json())
                     cat_handler.run_job(job)
                     new_job.delete()
-                elif retries < 5:
+                elif retries < 12:
                     retries += 1
                     print("No new jobs found. Retrying...")
                 else:

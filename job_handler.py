@@ -130,14 +130,21 @@ class JobHandler:
                     if job.job_status == STATUS.COMPLETED and job.result_file is not None:
                         self.update_result_file(job)
                 except Exception as e:
-                    status = json.loads(message.body)
-                    self.job_log[status["job_id"]].progress[0] = status["current"]
-                    self.job_log[status["job_id"]].progress[1] = status["total"]
-                    self.job_log[status["job_id"]].job_status = STATUS.RUNNING
+                    status_message = json.loads(message.body)
+                    try:
+                        print("Received Instance Shutdown Message ") ## DEBUG
+                        report = status_message["report"]
+                        instance_id = status_message["instance"]
+                        self.aws_controller.remove_instance(instance_id)
+                    except:
+                        print("Received Status Message ") ## DEBUG
+                        self.job_log[status_message["job_id"]].progress[0] = status_message["current"]
+                        self.job_log[status_message["job_id"]].progress[1] = status_message["total"]
+                        self.job_log[status_message["job_id"]].job_status = STATUS.RUNNING
 
                 message.delete()
         
-    def from_json(self, json_str):
+    def from_json(self, json_str):  
         return json.loads(json_str)
         
     def load_from_json(self, json_string):
