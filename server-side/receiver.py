@@ -89,7 +89,7 @@ def main():
             print("Error: Something went wrong. Check the logs for more details.")
             ec2_client = session.client('ec2')
             ec2_client.terminate_instances(InstanceIds=[instance_id])
-            control.send_message(MessageBody=json.dumps({"report": "Closed", "instance": instance_id}), message_group_id="Command")
+            control.send_message(MessageBody=json.dumps({"report": "Closed", "instance": instance_id}), MessageGroupId="Command")
             exit()
 
 main()

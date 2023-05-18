@@ -3,7 +3,7 @@
     "AWS-Settings": {
         "use-spot": true,
         "region": "us-east-2",
-        "image_id": "ami-0a695f0d95cefc163", 
+        "image_id": "ami-08ebf6060be93746b", 
         "instance_type": "t2.micro",
         "usage_limit": 1
     }    
