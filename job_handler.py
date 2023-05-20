@@ -152,7 +152,8 @@ class JobHandler:
         job = Job(int(json_string["job_id"]), json_string["hash"], json_string["hash_type"], self.convert_status(json_string["job_status"]), json_string["attack_mode"], json_string["required_info"])
         return job
     
-    def update_result_file(self, job):
+    def update_result_file(self, job): # NOT WORKING!!!
+        print("Updating result file") ## DEBUG
         with open(job.result_file, "w") as f:
             strng = f"{job.hash} : {job.required_info}"
             f.write(strng)

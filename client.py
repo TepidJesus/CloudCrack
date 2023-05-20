@@ -6,6 +6,7 @@ import dotenv
 import os
 import time
 import uuid
+import signal
 
 ## Problems:
 
@@ -21,6 +22,7 @@ class ClientController:
         
     def run(self):
         self.print_welcome()
+        signal.signal(signal.SIGINT, self.handle_interrupt)
         while True:
             user_input = input("\nCloudCrack > ")
             self.job_handler.check_for_response()
@@ -64,17 +66,33 @@ class ClientController:
                         print("Invalid Job ID")
             else:
                 print("Unknown Command -- Type 'help' for a list of commands")
-        
+
+    def handle_interrupt(self, signal, frame):
+        print("\nExiting...")
+        try:
+            self.aws_controller.cleanup()
+        except:
+            pass
+        exit(0)
 
     def print_welcome(self):
-        print("ASCII Art Goes Here")
-        print("Welcome to Cloud Crack")
+        print(""" 
+            _______  ___      _______  __   __  ______   _______  ______    _______  _______  ___   _ 
+            |       ||   |    |       ||  | |  ||      | |       ||    _ |  |   _   ||       ||   | | |
+            |       ||   |    |   _   ||  | |  ||  _    ||       ||   | ||  |  |_|  ||       ||   |_| |
+            |       ||   |    |  | |  ||  |_|  || | |   ||       ||   |_||_ |       ||       ||      _|
+            |      _||   |___ |  |_|  ||       || |_|   ||      _||    __  ||       ||      _||     |_ 
+            |     |_ |       ||       ||       ||       ||     |_ |   |  | ||   _   ||     |_ |    _  |
+            |_______||_______||_______||_______||______| |_______||___|  |_||__| |__||_______||___| |_|
+
+            """)
+        print("Welcome to Cloud Crack v0.1")
         print("Type 'help' for a list of commands")
 
     def print_help(self):
         print("\nhelp - print this message")
         print("exit - exit the program")
-        print("show <all/job_id) - list all jobs or show a specific job")
+        print("show <all / job_id) - list all jobs or show a specific job")
         print("create - create a new job")
         print("options - show CloudCrack settings menu")
         print("cancel <job_id> - cancel a job")
@@ -130,8 +148,8 @@ class ClientController:
                 print("Attack Mode: " + str(attack_mode))
                 print("Mask: " + mask)
                 print("Dictionary: " + dictionary)
-                print("Output File (Optional): " + output_file)
-                print("Hash File Location (Optional): " + hash_file_location)
+                print("Output (Optional - Location of desired text file for output): " + output_file)
+                print("Hashes (Optional - Location of bulk hash file): " + hash_file_location)
 
             if input_as_list[0].lower() == "set":
                 if input_as_list[1].lower() == "hash":
@@ -267,9 +285,9 @@ class ClientController:
 
 class AwsController:
     def __init__(self, config, mode):
+            self.config = config
             self.credentialManager = self.CredentialManager(self)
             self.session = None
-            self.config = config
             self.instances = []
             self.instance_profile = None
             
@@ -299,7 +317,7 @@ class AwsController:
                 print("You can find the required permissions in the setup guide in the README.md file.")
                 return False
             elif 'DryRunOperation' not in str(e):
-                print("Error: Your credentials are invalid. Please make sure you entered them correctly.")
+                print("Error: Your credentials are invalid. Please make sure you entered them correctly.\n")
                 return False
             elif 'DryRunOperation' in str(e):
                 return True
@@ -638,9 +656,8 @@ class AwsController:
     class CredentialManager:
 
         def __init__(self, aws_controller):
-            self.aws_access_key_id = None
-            self.aws_secret_access_key = None
             self.aws_controller = aws_controller
+            self.aws_access_key_id, self.aws_secret_access_key = self.get_credentials()
 
         def set_credentials(self, aws_access_key_id, aws_secret_access_key):
             with open(".env", "w") as f:
@@ -655,9 +672,10 @@ class AwsController:
                     aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
                     return aws_access_key_id, aws_secret_access_key
                 except:
-                    return False
+                    raise Exception("Error: Failed to load AWS credentials from .env file. Please check the file and try again.")
             else:
                 self.run_setup()
+                return self.get_credentials()
 
 
         def get_aws_access_key_id(self):
