@@ -28,7 +28,7 @@ Follow the steps below to set up and run CloudCrack:
 1. **Clone the repository:**
 
    ```shell
-   git clone https://github.com/your-username/CloudCrack.git
+   git clone https://github.com/TepidJesus/CloudCrack.git
    ```
 
 2. **Install the required dependencies:**
