@@ -1,7 +1,7 @@
 # CloudCrack
 
 [![LinkedIn](https://img.shields.io/badge/Connect%20on-LinkedIn-blue.svg)](https://www.linkedin.com/in/thomasholdom/)
-[![Stars](https://img.shields.io/github/stars/username/repo.svg)](https://github.com/TepidJesus/CloudCrack/stargazers)
+[![Stars](https://img.shields.io/github/stars/TepidJesus/CloudCrack.svg)](https://github.com/TepidJesus/CloudCrack/stargazers)
 
              _______  ___      _______  __   __  ______   _______  ______    _______  _______  ___   _ 
             |       ||   |    |       ||  | |  ||      | |       ||    _ |  |   _   ||       ||   | | |
