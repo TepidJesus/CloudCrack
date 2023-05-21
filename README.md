@@ -64,6 +64,9 @@ Keep this window open, you will need these credentials when you start CloudCrack
    python3 cloudcrack.py
    ```
 
+## Usage
+ - CloudCrack currently supports HashCats' Mask and Dictionary attack modes.
+
 ## Future Development
 
 The future development of CloudCrack will focus on the following areas:
