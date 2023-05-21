@@ -11,10 +11,6 @@
             |_______||_______||_______||_______||______| |_______||___|  |_||__| |__||_______||___| |_|
 
 
-## About the Author
-
-CloudCrack is developed and maintained by [Thomas Holdom](https://www.linkedin.com/in/thomasholdom/), a passionate Computer Science student at the University of Auckland with experience in penetration testing, cloud security and software development.
-
 ## Features
 
 CloudCrack is a powerful CLI program that leverages AWS EC2 services to de-hash passwords at an effectively infinite scale, right from the command line. Key features include:
@@ -41,7 +37,10 @@ Follow the steps below to set up and run CloudCrack:
    pip install -r requirements.txt
    ```
 
-3. 
+3. **Apply For P-Instance Quota increase using AWS Service Quota menu:**  
+As CloudCrack runs entirely on your AWS account you need to apply for an increase in your P-Instance vCPU allowance. If you've never applied for an increase before a good place to start is 8 vCPU's, as this will likely be accepted. If you are a frequent AWS user and routinely have a high active vCPU count you can apply for much greater numbers. CloudCrack will work with any amount greater than 4 vCPU's.
+**[Apply Here](https://us-east-2.console.aws.amazon.com/servicequotas/home/services/ec2/quotas/L-417A185B)**
+
 
 4. **Navigate to the IAM page of AWS and create a new IAM user with the following permissions:**  
 Navigation: IAM > Users > Create User > Attach Policies Directly 
@@ -65,11 +64,16 @@ Keep this window open, you will need these credentials when you start CloudCrack
 
 The future development of CloudCrack will focus on the following areas:
 
-- **Additional Cloud Providers**: Expanding support for other cloud providers, such as Azure and Google Cloud Platform, to offer users a wider range of options.
-- **Enhanced Hashing Algorithms**: Adding support for more password hashing algorithms commonly used in various applications.
-- **Improved User Experience**: Incorporating user feedback to enhance the usability, performance, and efficiency of CloudCrack.
+- **Better Hashcat Integration**: Expanding support for HashCat features such as more advanced mask options and niche attack modes.
+- **Live Progress Updates**: Adding support for auto-refresh of job progress and other QoL UI improvements.
+- **Improved User Experience**: Incorporating user feedback to enhance the usability, performance, and efficiency of CloudCrack. This will also include more verbose error handling and recovery methods.
 
 We welcome contributions and suggestions from the community to make CloudCrack even better.
+
+## About the Author
+
+CloudCrack is developed and maintained by [Thomas Holdom](https://www.linkedin.com/in/thomasholdom/), a passionate Computer Science student at the University of Auckland with experience in penetration testing, cloud security and software development.
+
 
 ## Legal Disclaimer
 
