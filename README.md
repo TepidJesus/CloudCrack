@@ -3,13 +3,13 @@
 [![LinkedIn](https://img.shields.io/badge/Connect%20on-LinkedIn-blue.svg)](https://www.linkedin.com/in/thomasholdom/)
 [![Stars](https://img.shields.io/github/stars/TepidJesus/CloudCrack.svg)](https://github.com/TepidJesus/CloudCrack/stargazers)
 
-             _______  ___      _______  __   __  ______   _______  ______    _______  _______  ___   _ 
-            |       ||   |    |       ||  | |  ||      | |       ||    _ |  |   _   ||       ||   | | |
-            |       ||   |    |   _   ||  | |  ||  _    ||       ||   | ||  |  |_|  ||       ||   |_| |
-            |       ||   |    |  | |  ||  |_|  || | |   ||       ||   |_||_ |       ||       ||      _|
-            |      _||   |___ |  |_|  ||       || |_|   ||      _||    __  ||       ||      _||     |_ 
-            |     |_ |       ||       ||       ||       ||     |_ |   |  | ||   _   ||     |_ |    _  |
-            |_______||_______||_______||_______||______| |_______||___|  |_||__| |__||_______||___| |_| v0.1
+          _______  ___      _______  __   __  ______   _______  ______    _______  _______  ___   _ 
+         |       ||   |    |       ||  | |  ||      | |       ||    _ |  |   _   ||       ||   | | |
+         |       ||   |    |   _   ||  | |  ||  _    ||       ||   | ||  |  |_|  ||       ||   |_| |
+         |       ||   |    |  | |  ||  |_|  || | |   ||       ||   |_||_ |       ||       ||      _|
+         |      _||   |___ |  |_|  ||       || |_|   ||      _||    __  ||       ||      _||     |_ 
+         |     |_ |       ||       ||       ||       ||     |_ |   |  | ||   _   ||     |_ |    _  |
+         |_______||_______||_______||_______||______| |_______||___|  |_||__| |__||_______||___| |_| v0.1
 
 
 ## Features
@@ -66,6 +66,29 @@ Keep this window open, you will need these credentials when you start CloudCrack
 
 ## Usage
  - CloudCrack currently supports HashCats' Mask and Dictionary attack modes.
+   - **To Perform A Mask Attack**: (Full Release)
+      1. Enter 'Create' Mode
+      2. Set Options And Run
+         - set mode mask
+         - set mask <mask_string> ([Syntax Found Here](https://hashcat.net/wiki/doku.php?id=mask_attack))
+         - set type <hash_type_code> ([Codes Found Here](https://hashcat.net/wiki/doku.php?id=example_hashes))
+         - set hash <hash_string> or set hashes <hash_file_location>
+         - run
+   - **To Perform Dictionary Attack**: (In Beta)
+      1. Enter 'Create' Mode
+      2. Set Options And Run
+         - set mode dictionary
+         - set dictionary <dictionary_file_location>
+         - set type <hash_type_code> ([Codes Found Here](https://hashcat.net/wiki/doku.php?id=example_hashes))
+         - set hash <hash_string> or set hashes <hash_file_location>
+         - run
+
+## Commands:
+- **Help** - Show help menu for current page
+- **Exit** - Leave a page or quit (if on homescreen)
+- **Create** - Enter create mode
+- **Show <all>** - Show all hash jobs for this session
+
 
 ## Future Development
 
