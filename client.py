@@ -91,10 +91,9 @@ class ClientController:
 
     def print_help(self):
         print("\nhelp - print this message")
-        print("exit - exit the program")
-        print("show <all / job_id) - list all jobs or show a specific job")
+        print("exit - exit CloudCrack")
+        print("show <all> / <job_id>) - list all jobs or show a specific job")
         print("create - create a new job")
-        print("options - show CloudCrack settings menu")
         print("cancel <job_id> - cancel a job")
 
     
@@ -141,7 +140,7 @@ class ClientController:
             user_input = input("\nCloudCrack > Create > ")
             input_as_list = user_input.split(" ")
 
-            if input_as_list[0].lower() == "options" or input_as_list[0].lower() == "help":
+            if input_as_list[0].lower() == "options":
                 print("Options:")
                 print("Hash: " + _hash)
                 print("Hash Type: " + hash_type)
@@ -150,6 +149,12 @@ class ClientController:
                 print("Dictionary: " + dictionary)
                 print("Output (Optional - Location of desired text file for output): " + output_file)
                 print("Hashes (Optional - Location of bulk hash file): " + hash_file_location)
+            elif input_as_list[0].lower() == "help":
+                print("\nhelp - print this message")
+                print("exit - return to the main menu")
+                print("set <option> <value> - set an option to a value")
+                print("run - run the job")
+                print("options - list the current options and their values")
 
             if input_as_list[0].lower() == "set":
                 if input_as_list[1].lower() == "hash":
@@ -712,4 +717,3 @@ class AwsController:
                     continue
                 
             
-
