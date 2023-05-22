@@ -17,7 +17,7 @@
 CloudCrack is a powerful CLI program that leverages AWS EC2 services to de-hash passwords at an effectively infinite scale, right from the command line. Key features include:
 
 - **Scalable Password De-hashing**: Utilize the power of AWS EC2 services to perform password de-hashing on a massive scale, enabling quick retrieval of acquired from engagements.
-- **Cost-Effective**: CloudCrack allows you to utilize AWS EC2 services without any upfront costs. However, please note that you are responsible for all AWS usage fees incurred.
+- **Cost-Effective**: CloudCrack allows you to utilize AWS EC2 services without any upfront costs. However, please note that you are responsible for all AWS usage fees incurred. CloudCrack features and auto-shutdown system to close idle EC2 instances to minimize costs.
 - **Zero Overhead**: The AWS infrastructure that supports CloudCrack runs entirely within the AWS Free-Tier. The only costs you pay for are directly related to the de-hashing of passwords.
 - **AWS Account Requirement**: CloudCrack runs entirely within your own AWS account. Please ensure that you have an AWS account already setup.
 - **Easy Setup**: CloudCrack provides step-by-step instructions to guide you through the setup process, including creating an AWS IAM user and applying for higher vCPU limits.
@@ -73,7 +73,9 @@ Keep this window open, you will need these credentials when you start CloudCrack
          - set mask <mask_string> ([Syntax Found Here](https://hashcat.net/wiki/doku.php?id=mask_attack))
          - set type <hash_type_code> ([Codes Found Here](https://hashcat.net/wiki/doku.php?id=example_hashes))
          - set hash <hash_string> or set hashes <hash_file_location>
-         - run
+         - run  
+      
+      ![Example Mask Job](images/Example_Mask_Job.png)
    - **To Perform Dictionary Attack**: (In Beta)
       1. Enter 'Create' Mode
       2. Set Options And Run
@@ -81,14 +83,19 @@ Keep this window open, you will need these credentials when you start CloudCrack
          - set dictionary <dictionary_file_location>
          - set type <hash_type_code> ([Codes Found Here](https://hashcat.net/wiki/doku.php?id=example_hashes))
          - set hash <hash_string> or set hashes <hash_file_location>
-         - run
+         - run  
+
+      ![Example Dictionary Job](images/Example_Dictionary_Job.png)
 
 ## Commands:
 - **Help** - Show help menu for current page
 - **Exit** - Leave a page or quit (if on homescreen)
 - **Create** - Enter create mode
-- **Show <all>** - Show all hash jobs for this session
+- **Show** all - Show all hash jobs and their status for this session
+- **Show** <job_num> - Show the status of a specific hash job
 
+## Known Issues (PLEASE READ!)
+- After an EC2 instance shuts down there is current a ~2 minute period before AWS releases the assocaited vCPU's back to your account. This means if you have a low limit you may have two wait ~2 minutes between submitting jobs if you let the instance sit idle for 60 seconds without submitting another hash job as this triggers the cost-saving auto shutdown.
 
 ## Future Development
 
