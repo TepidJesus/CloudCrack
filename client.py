@@ -86,7 +86,7 @@ class ClientController:
             |_______||_______||_______||_______||______| |_______||___|  |_||__| |__||_______||___| |_|
 
             """)
-        print("Welcome to Cloud Crack v0.1")
+        print("Welcome to Cloud Crack v1.0")
         print("Type 'help' for a list of commands")
 
     def print_help(self):
