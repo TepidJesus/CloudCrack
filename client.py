@@ -340,7 +340,6 @@ class AwsController:
             elif 'DryRunOperation' in str(e):
                     return True
             else:
-                print("S3 Test Error") ## DEBUG
                 return False
     
     def test_sqs(self):
@@ -358,9 +357,6 @@ class AwsController:
                 return False
             else:
                 print(e)
-
-
-        print("SQS Test Error") ## DEBUG
         return False
         
     def get_session(self, mode):
@@ -378,7 +374,6 @@ class AwsController:
     def get_vCPU_limit(self):
         quota_client = self.session.client('service-quotas')
         response = quota_client.get_service_quota(ServiceCode='ec2', QuotaCode='L-417A185B')
-        print(f"Your current vCPU limit is {response['Quota']['Value']}") ## DEBUG
         return int(response['Quota']['Value'])
     
     def get_instances(self):
@@ -386,7 +381,6 @@ class AwsController:
     
     def create_queue(self, queue_name):
         sqs = self.session.resource('sqs')
-        print("Creating queue: " + queue_name + ".fifo") ## DEBUG
         try:
             queue = sqs.create_queue(QueueName=queue_name + ".fifo", Attributes={'DelaySeconds': '1', 
                                                             'FifoQueue': 'true', 
@@ -402,7 +396,6 @@ class AwsController:
                 print(e)
         except Exception as e:
             print("Error: Failed to create queue. Please check your AWS credentials and try again.")
-            print(e) ## DEBUG
             self.cleanup()
             exit()
         return queue
@@ -433,13 +426,11 @@ class AwsController:
             queue = sqs.get_queue_by_name(QueueName=name + ".fifo")
         except ClientError as e:
             if e.response['Error']['Code'] == 'AWS.SimpleQueueService.NonExistentQueue':
-                print(f"Error: Failed to locate queue: {name}.fifo") ## DEBUG
                 return
         return queue
     
     def create_instance(self):
         ec2 = self.session.resource('ec2')
-        print("Creating instance...") ## DEBUG
         if self.instance_profile is None:
             self.instance_profile = self.create_instance_profile()
         try:
@@ -457,7 +448,7 @@ class AwsController:
                     print(f"Only Secured {self.get_num_instances()}. You can continue with this number of instances, but you will experience decreased performance.")
                     print("You can also try again later or try a different region. (Specify this in the settings menu)")
             elif e.response['Error']['Code'] == 'VcpuLimitExceeded':
-                print("VCPU Limit Exceeded") ## DEBUG
+                print("VCPU Limit Exceeded - Likely due to Known Issue #1")
                 return
             else:
                 print(e)
@@ -511,7 +502,6 @@ class AwsController:
         sqs = self.session.resource('sqs')
         queues = sqs.queues.all()
         for queue in queues:
-            print(f"Deleting queue: {queue.url}") ## DEBUG
             queue.delete()
 
     def remove_iam_role(self): ## TODO: Delete policies before deleting role
@@ -525,12 +515,11 @@ class AwsController:
         return False
     
     def remove_instance(self, instance_id):
-        print("Removing instance: " + instance_id) ## DEBUG
         for instance in self.instances:
             if instance.id == instance_id:
                 self.instances.remove(instance)
+                print("Idle Instance Terminated")
                 break
-        print(self.instances) ## DEBUG
             
     def remove_instance_profile(self):
         iam = self.session.client('iam')
@@ -632,7 +621,6 @@ class AwsController:
             elif e.response['Error']['Code'] == 'EntityAlreadyExists':
                 pass
             else:
-                print(e) ## DEBUG
                 return False
 
         return response['Role']

@@ -122,7 +122,6 @@ class JobHandler:
         inboundMessages = self.inbound_queue.receive_messages(MaxNumberOfMessages=10) ## TODO: Make AWScontroller method
 
         if len(inboundMessages) > 0:
-            print(f"received {len(inboundMessages)} new inbound messages") ## DEBUG
             for message in inboundMessages:
                 try:
                     job = self.load_from_json(message.body)
@@ -132,12 +131,10 @@ class JobHandler:
                 except Exception as e:
                     status_message = json.loads(message.body)
                     try:
-                        print("Received Instance Shutdown Message ") ## DEBUG
                         report = status_message["report"]
                         instance_id = status_message["instance"]
                         self.aws_controller.remove_instance(instance_id)
                     except:
-                        print("Received Status Message ") ## DEBUG
                         self.job_log[status_message["job_id"]].progress[0] = status_message["current"]
                         self.job_log[status_message["job_id"]].progress[1] = status_message["total"]
                         self.job_log[status_message["job_id"]].job_status = STATUS.RUNNING
@@ -153,7 +150,6 @@ class JobHandler:
         return job
     
     def update_result_file(self, job): # NOT WORKING!!!
-        print("Updating result file") ## DEBUG
         with open(job.result_file, "w") as f:
             strng = f"{job.hash} : {job.required_info}"
             f.write(strng)
