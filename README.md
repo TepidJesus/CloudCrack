@@ -2,6 +2,7 @@
 
 [![LinkedIn](https://img.shields.io/badge/Connect%20on-LinkedIn-blue.svg)](https://www.linkedin.com/in/thomasholdom/)
 [![Stars](https://img.shields.io/github/stars/TepidJesus/CloudCrack.svg)](https://github.com/TepidJesus/CloudCrack/stargazers)
+[![Downloads](https://img.shields.io/github/downloads/TepidJesus/CloudCrack/total.svg)](https://github.com/TepidJesus/CloudCrack/releases)
 
           _______  ___      _______  __   __  ______   _______  ______    _______  _______  ___   _ 
          |       ||   |    |       ||  | |  ||      | |       ||    _ |  |   _   ||       ||   | | |
@@ -93,15 +94,17 @@ Keep this window open, you will need these credentials when you start CloudCrack
 - **Create** - Enter create mode
 - **Show** all - Show all hash jobs and their status for this session
 - **Show** <job_num> - Show the status of a specific hash job
+- **Cancel** <job_num> - Cancel a job 
 
 ## Known Issues (PLEASE READ!)
-- After an EC2 instance shuts down there is current a ~2 minute period before AWS releases the assocaited vCPU's back to your account. This means if you have a low limit you may have two wait ~2 minutes between submitting jobs if you let the instance sit idle for 60 seconds without submitting another hash job as this triggers the cost-saving auto shutdown.
+- After an EC2 instance shuts down there is current a ~2 minute period before AWS releases the assocaited vCPU's back to your account. This means if you have a low limit you may have two wait ~2 minutes between submitting jobs if you let the instance sit idle for 60 seconds without submitting another hash job as this triggers the cost-saving auto shutdown. FIX IN PROGRESS
+- It is currently not possible to cancel a job that is not being completed. E.g if status of the Job is 'QUEUED' it cannot be canceled. The current work around is to wait until the job is 'RUNNING' before canceling or exit CloudCrack as this will delete the queues. This is an AWS SQS FIFO Queue limitation that I'm working on.
 
 ## Future Development
 
 The future development of CloudCrack will focus on the following areas:
 
-- **Better Hashcat Integration**: Expanding support for HashCat features such as more advanced mask options and niche attack modes.
+- **Better Hashcat Integration**: Expanding support for HashCat features such as more advanced mask options and more attack modes and adding some of the more niche Hashcat features (e.g the Brain server function).
 - **Live Progress Updates**: Adding support for auto-refresh of job progress and other QoL UI improvements.
 - **Improved User Experience**: Incorporating user feedback to enhance the usability, performance, and efficiency of CloudCrack. This will also include more verbose error handling and recovery methods.
 
