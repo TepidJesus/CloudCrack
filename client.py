@@ -283,7 +283,7 @@ class ClientController:
     
     def vcpu_limit_message(self, limit):
         print("It looks like your AWS account has a P-Instance vCPU limit of " + str(limit) + ".")
-        print("To use CloudCrack, you need to increase this limit to at least 4. (>8 recommended)")
+        print("To use CloudCrack, you need to increase this limit to at least 4. (>= 8 recommended)")
         print("You can apply for a limit increase here: https://console.aws.amazon.com/servicequotas/home?region=us-east-2#!/services/ec2/quotas/L-417A185B")
 
 
@@ -291,7 +291,8 @@ class ClientController:
 class AwsController:
     def __init__(self, config, mode):
             self.config = config
-            self.credentialManager = self.CredentialManager(self)
+            if mode == "client":
+                self.credentialManager = self.CredentialManager(self)
             self.session = None
             self.instances = []
             self.instance_profile = None
