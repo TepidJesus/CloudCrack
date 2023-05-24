@@ -28,15 +28,12 @@ CloudCrack is a powerful CLI program that leverages AWS EC2 services to de-hash 
 
 Follow the steps below to set up and run CloudCrack:
 
-1. **Clone the repository:**
+1. **Download the latest release:**
 
-   ```shell
-   git clone https://github.com/TepidJesus/CloudCrack.git
-   ```
-      ```shell
-   cd /CloudCrack/
-   ```
-
+   - Download the latest release (the .zip file) from the 'Releases' tab.  
+   - Extract the file contents
+   - Open Terminal / CMD in the extracted folder  
+   
 2. **Install the required dependencies:**
 
    ```shell
