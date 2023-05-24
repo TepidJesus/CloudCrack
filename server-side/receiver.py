@@ -40,15 +40,11 @@ def get_config():
 def main():
 
     try:
-        dotenv.load_dotenv()
-        aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
-        aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-        session = boto3.Session(aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name='us-east-2')
+        session = boto3.Session(region_name='us-east-2')
         response = requests.get('http://169.254.169.254/latest/meta-data/instance-id')
         instance_id = response.text
         
     except:
-        print("Error: Your credentials are invalid. Run --setup again if your credentials have changed.")
         ec2_client = session.client('ec2')
         ec2_client.terminate_instances(InstanceIds=[instance_id])
         exit()    
@@ -86,7 +82,7 @@ def main():
                     raise Exception("No new jobs found.")
             time.sleep(5)
         except:
-            print("Error: Something went wrong. Check the logs for more details.")
+            print("Error: Something went wrong. Check the  logs for more details.")
             ec2_client = session.client('ec2')
             ec2_client.terminate_instances(InstanceIds=[instance_id])
             return_queue.send_message(MessageBody=json.dumps({"report": "Closed", "instance": instance_id}), MessageGroupId="Command")
