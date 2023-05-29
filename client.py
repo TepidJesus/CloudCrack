@@ -19,7 +19,7 @@ class ClientController:
     def __init__(self):
         self.cofig = self.get_config()
         self.aws_controller = AwsController(self.cofig, "client")
-        self.job_handler = JobHandler(self.aws_controller, "client")
+        self.job_handler = JobHandler(self.aws_controller, "client", self.cofig["General"]["debug_mode"])
         
     def run(self):
         self.print_welcome()
@@ -107,7 +107,7 @@ class ClientController:
             print("Hash: " + job.hash)
             print("Status: " + job.job_status.name)
             if job.job_status == STATUS.RUNNING:
-                print("Progress: " + str(round(job.progress[0] / job.progress[1], 2) * 100) + "%")
+                print("Progress: " + str(round(job.progress[0] / job.progress[1], 4) * 100) + "%")
             elif job.job_status == STATUS.COMPLETED:
                 print("Result: " + job.required_info)
             print("---------------------------------")
