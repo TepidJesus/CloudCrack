@@ -33,8 +33,9 @@ class Job:
     
 class JobHandler:
 
-    def __init__(self, aws_controller, mode):
+    def __init__(self, aws_controller, mode, debug=False):
         self.aws_controller = aws_controller
+        self.debug = debug
         if mode == "client":
             self.outbound_queue = self.aws_controller.create_queue('deliveryQueue')
             self.control_queue = self.aws_controller.create_queue('controlQueue')
@@ -57,29 +58,39 @@ class JobHandler:
 
     def send_job(self, job):
         job.job_status = STATUS.QUEUED
+        if self.debug:
+            print(f"[DEBUG] Sending job {job.job_id} to queue.")
+
         if job.required_info is not None and job.attack_mode == 0:
             if self.wordlist_bucket_name is None:
+                if self.debug:
+                    print(f"[DEBUG] Creating new bucket for job {job.job_id}.")
                 self.wordlist_bucket_name = self.aws_controller.create_bucket("wordlist-bucket")
             file_name = self.get_file_name(job.required_info)
             response = self.aws_controller.upload_file(job.required_info, self.wordlist_bucket_name, file_name)
             if response == False:
-                print(f"Error: Failed to create bucket for job {job.job_id}. Continuing...")
+                if self.debug:
+                    print(f"[DEBUG] Failed to create bucket for job {job.job_id}. Continuing...")
+                else:
+                    print(f"Error: Failed to create bucket for job {job.job_id}. Continuing...")
+                    print("Please check your AWS S3 Permissions and try again.")
                 job.job_status = STATUS.FAILED
                 return
             
             job.required_info = (file_name, self.wordlist_bucket_name)
+
         if self.aws_controller.get_num_instances() < self.aws_controller.get_max_instances():
             self.aws_controller.create_instance()
-        else:
-            print("Max number of instances reached. Job queued.")
+        elif self.debug:
+            print("[DEBUG] Max number of instances reached. Job queued.")
         response = self.aws_controller.message_queue(self.outbound_queue, job.to_json(), "Job")
         if response == False:
             print(f"Error: Failed to send job {job.job_id} to queue. Continuing...")
             job.job_status = STATUS.FAILED
             return
         else:
-            print(f"Job {job.job_id} sent to queue.")
-            self.job_log[job.job_id] = job ## TODO: need to move a way from using receipt handle. Consider moving away from FIFO queues
+            print(f"Job {job.job_id} Submitted For Processing...")
+            self.job_log[job.job_id] = job
  
     
     def get_file_name(self, file_location):
@@ -91,6 +102,8 @@ class JobHandler:
         return num
     
     def create_job(self, _hash, hash_type, attack_mode, required_info):
+        if self.debug:
+            print(f"[DEBUG] Creating new job with hash {_hash} and hash type {hash_type}.")
         job = Job(self.get_new_job_id(), _hash, hash_type, STATUS.CREATED, attack_mode, required_info)
         return job
     
@@ -108,7 +121,7 @@ class JobHandler:
             return False
         else:
             self.job_log[job_id].job_status = STATUS.CANCELLED
-            print(f"Job {job_id} cancelled.")
+            print(f"Success: Job #{job_id} cancelled.")
             return True
 
     def cancel_all_jobs(self):
@@ -123,9 +136,15 @@ class JobHandler:
 
         if len(inboundMessages) > 0:
             for message in inboundMessages:
+                if self.debug:
+                    print(f"[DEBUG] Received message: {message.body}")
+
                 try:
+                    if message.body["job_id"] not in self.job_log:
+                        continue
                     job = self.load_from_json(message.body)
                     self.job_log[job.job_id] = job
+
                     if job.job_status == STATUS.COMPLETED and job.result_file is not None:
                         self.update_result_file(job)
                 except Exception as e:
@@ -133,6 +152,10 @@ class JobHandler:
                     try:
                         report = status_message["report"]
                         instance_id = status_message["instance"]
+
+                        if self.debug:
+                            print(f"[DEBUG] Received report from {instance_id}: {report}")
+
                         self.aws_controller.remove_instance(instance_id)
                     except:
                         self.job_log[status_message["job_id"]].progress[0] = status_message["current"]
@@ -150,6 +173,8 @@ class JobHandler:
         return job
     
     def update_result_file(self, job): # NOT WORKING!!!
+        if self.debug:
+            print(f"[DEBUG] Updating result file for job {job.job_id}")
         with open(job.result_file, "w") as f:
             strng = f"{job.hash} : {job.required_info}"
             f.write(strng)

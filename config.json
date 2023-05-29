@@ -6,6 +6,10 @@
         "image_id": "ami-08ebf6060be93746b", 
         "instance_type": "t2.micro",
         "usage_limit": 1
-    }    
+    },
+    
+    "General": {
+        "debug_mode": false
+    }
 
 }
