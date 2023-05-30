@@ -67,10 +67,10 @@ class JobHandler:
                     print(f"[DEBUG] Creating new bucket for job {job.job_id}.")
                 self.wordlist_bucket_name = self.aws_controller.create_bucket("wordlist-bucket")
             file_name = self.get_file_name(job.required_info)
-            response = self.aws_controller.upload_file(job.required_info, self.wordlist_bucket_name, file_name)
+            response = self.aws_controller.upload_file(job.required_info, self.wordlist_bucket_name, file_name) #TODO: Prevent duplicate uploads
             if response == False:
                 if self.debug:
-                    print(f"[DEBUG] Failed to create bucket for job {job.job_id}. Continuing...")
+                    print(f"[DEBUG] Failed to Upload Wordlist for job #{job.job_id}. Continuing...")
                 else:
                     print(f"Error: Failed to create bucket for job {job.job_id}. Continuing...")
                     print("Please check your AWS S3 Permissions and try again.")
@@ -80,7 +80,8 @@ class JobHandler:
             job.required_info = (file_name, self.wordlist_bucket_name)
 
         if self.aws_controller.get_num_instances() < self.aws_controller.get_max_instances():
-            self.aws_controller.create_instance()
+            # self.aws_controller.create_instance() ## DEBUG TODO: Uncomment
+            pass
         elif self.debug:
             print("[DEBUG] Max number of instances reached. Job queued.")
         response = self.aws_controller.message_queue(self.outbound_queue, job.to_json(), "Job")
