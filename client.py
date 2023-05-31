@@ -9,10 +9,8 @@ import uuid
 import signal
 
 ## Problems:
-
 ## TODO: Finish settings menu and add a way to change settings and save them to the config fil
 ## TODO: Potentially add a seperate control queue for each Ec2 hashing instance
-## TODO: Make it so client doens't cry if the queues already exist when it tries to create them
 
 class ClientController:
 

@@ -85,7 +85,7 @@ class JobHandler:
             job.required_info = (file_name, self.wordlist_bucket_name)
 
         if self.aws_controller.get_num_instances() < self.aws_controller.get_max_instances():
-            # self.aws_controller.create_instance() ## DEBUG TODO: Uncomment
+            self.aws_controller.create_instance()
             pass
         elif self.debug:
             print("[DEBUG] Max number of instances reached. Job queued.")
@@ -146,7 +146,7 @@ class JobHandler:
                     print(f"[DEBUG] Received message: {message.body}")
 
                 try:
-                    if message.body["job_id"] not in self.job_log:
+                    if json.loads(message.body)["job_id"] not in self.job_log:
                         continue
                     job = self.load_from_json(message.body)
                     self.job_log[job.job_id] = job
