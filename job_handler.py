@@ -77,6 +77,8 @@ class JobHandler:
                         print("Please check your AWS S3 Permissions and try again.")
                     job.job_status = STATUS.FAILED
                     return
+                else:
+                    self.stored_wordlists.append(file_name)
             elif self.debug:
                 print(f"[DEBUG] Wordlist {file_name} already Uploaded. Continuing...")
             
