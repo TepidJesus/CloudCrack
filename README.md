@@ -74,7 +74,7 @@ Keep this window open, you will need these credentials when you start CloudCrack
          - run  
       
       ![Example Mask Job](images/Example_Mask_Job.png)
-   - **To Perform Dictionary Attack**: (In Beta)
+   - **To Perform Dictionary Attack**: (Full Release)
       1. Enter 'Create' Mode
       2. Set Options And Run
          - set mode dictionary
