@@ -36,6 +36,7 @@ class JobHandler:
     def __init__(self, aws_controller, mode, debug=False):
         self.aws_controller = aws_controller
         self.debug = debug
+        self.stored_wordlists = []
         if mode == "client":
             self.outbound_queue = self.aws_controller.create_queue('deliveryQueue')
             self.control_queue = self.aws_controller.create_queue('controlQueue')
@@ -67,20 +68,25 @@ class JobHandler:
                     print(f"[DEBUG] Creating new bucket for job {job.job_id}.")
                 self.wordlist_bucket_name = self.aws_controller.create_bucket("wordlist-bucket")
             file_name = self.get_file_name(job.required_info)
-            response = self.aws_controller.upload_file(job.required_info, self.wordlist_bucket_name, file_name)
-            if response == False:
-                if self.debug:
-                    print(f"[DEBUG] Failed to create bucket for job {job.job_id}. Continuing...")
+            if file_name not in self.stored_wordlists:
+                if not self.aws_controller.upload_file(job.required_info, self.wordlist_bucket_name, file_name):
+                    if self.debug:
+                        print(f"[DEBUG] Failed to Upload Wordlist for job #{job.job_id}. Continuing...")
+                    else:
+                        print(f"Error: Failed to create bucket for job {job.job_id}. Continuing...")
+                        print("Please check your AWS S3 Permissions and try again.")
+                    job.job_status = STATUS.FAILED
+                    return
                 else:
-                    print(f"Error: Failed to create bucket for job {job.job_id}. Continuing...")
-                    print("Please check your AWS S3 Permissions and try again.")
-                job.job_status = STATUS.FAILED
-                return
+                    self.stored_wordlists.append(file_name)
+            elif self.debug:
+                print(f"[DEBUG] Wordlist {file_name} already Uploaded. Continuing...")
             
             job.required_info = (file_name, self.wordlist_bucket_name)
 
         if self.aws_controller.get_num_instances() < self.aws_controller.get_max_instances():
             self.aws_controller.create_instance()
+            pass
         elif self.debug:
             print("[DEBUG] Max number of instances reached. Job queued.")
         response = self.aws_controller.message_queue(self.outbound_queue, job.to_json(), "Job")
@@ -140,7 +146,7 @@ class JobHandler:
                     print(f"[DEBUG] Received message: {message.body}")
 
                 try:
-                    if message.body["job_id"] not in self.job_log:
+                    if json.loads(message.body)["job_id"] not in self.job_log:
                         continue
                     job = self.load_from_json(message.body)
                     self.job_log[job.job_id] = job
