@@ -154,6 +154,7 @@ class ClientController:
                 print("set <option> <value> - set an option to a value")
                 print("run - run the job")
                 print("options - list the current options and their values")
+                print("clear - clear all options")
 
             if input_as_list[0].lower() == "set":
                 if input_as_list[1].lower() == "hash":
@@ -212,6 +213,14 @@ class ClientController:
                         continue
                 elif mask != "":
                     required_info = mask
+
+                if output_file != "":
+                    try:
+                        with open(output_file, "w") as file:
+                            pass
+                    except:
+                        with open(output_file, "x") as file:
+                            pass
                 
                 if hash_file_location != "":
                     if self.config["General"]["debug_mode"] == True:
@@ -229,13 +238,16 @@ class ClientController:
                         _hash = _hash.strip(" ")
                         _hash = _hash.strip("\n")
                         try: 
-                            jb = self.job_handler.create_job(_hash, hash_type, attack_mode, required_info)
+                            jb = self.job_handler.create_job(_hash, hash_type, attack_mode, required_info, output_file)
                             self.job_handler.send_job(jb)
-                        except:
-                            print("Failed to create job") # DEBUG
+                        except Exception as e:
+                            print(f"Failed To Create Job For Hash: {_hash}")
+                            if self.config["General"]["debug_mode"] == True:
+                                print("[DEBUG] Failed To Create Job For Hash: " + _hash)
+                                print(f"[DEBUG] Reason: {e}")
                             continue
                 else:
-                    jb = self.job_handler.create_job(_hash, hash_type, attack_mode, required_info)
+                    jb = self.job_handler.create_job(_hash, hash_type, attack_mode, required_info, output_file)
                     self.job_handler.send_job(jb)
 
             if input_as_list[0] == "clear":
@@ -554,7 +566,7 @@ class AwsController:
         for queue in queues:
             queue.delete()
 
-    def remove_iam_role(self): ## TODO: Delete policies before deleting role
+    def remove_iam_role(self):
         iam = self.session.client('iam')
 
         if self.config["General"]["debug_mode"] == True:

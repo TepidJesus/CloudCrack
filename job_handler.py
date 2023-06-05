@@ -23,7 +23,10 @@ class Job:
         self.attack_mode = attack_mode
         self.required_info = required_info
         self.progress = [0,0]
-        self.result_file = result_file
+        if result_file == "":
+            self.result_file = None
+        else:
+            self.result_file = result_file
 
     def __str__(self):
         return f"Job ID: {self.job_id} | Hash: {self.hash} | Hash Type: {self.hash_type} | Job Status: {self.job_status}"
@@ -182,8 +185,7 @@ class JobHandler:
         if self.debug:
             print(f"[DEBUG] Updating result file for job {job.job_id}")
         with open(job.result_file, "w") as f:
-            strng = f"{job.hash} : {job.required_info}"
-            f.write(strng)
+            f.write(f"{job.hash} : {job.required_info}")
     
     def convert_status(self, status):
         if status == 1:
