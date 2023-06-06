@@ -15,9 +15,9 @@ import signal
 class ClientController:
 
     def __init__(self):
-        self.cofig = self.get_config()
-        self.aws_controller = AwsController(self.cofig, "client")
-        self.job_handler = JobHandler(self.aws_controller, "client", self.cofig["General"]["debug_mode"])
+        self.config = self.get_config()
+        self.aws_controller = AwsController(self.config, "client")
+        self.job_handler = JobHandler(self.aws_controller, "client", self.config["General"]["debug_mode"])
         
     def run(self):
         self.print_welcome()
@@ -85,7 +85,7 @@ class ClientController:
             |_______||_______||_______||_______||______| |_______||___|  |_||__| |__||_______||___| |_|
 
             """)
-        print("Welcome to Cloud Crack v1.0")
+        print("Welcome to Cloud Crack v1.1")
         print("Type 'help' for a list of commands")
 
     def print_help(self):
@@ -215,19 +215,24 @@ class ClientController:
                     required_info = mask
 
                 if output_file != "":
+                    if self.config["General"]["debug_mode"] == True:
+                        print("[DEBUG] Attempting to Locate Output File: " + output_file)
                     try:
                         with open(output_file, "w") as file:
-                            pass
+                            if self.config["General"]["debug_mode"] == True:
+                                print("[DEBUG] Successfully Located Output File")
                     except:
                         with open(output_file, "x") as file:
-                            pass
+                            if self.config["General"]["debug_mode"] == True:
+                                print("[DEBUG] Successfully Created Output File")
                 
                 if hash_file_location != "":
                     if self.config["General"]["debug_mode"] == True:
                         print("[DEBUG] Attempting to Get Hash file location: " + hash_file_location)
                     try:
                         with open(hash_file_location, "r") as file:
-                            pass
+                            if self.config["General"]["debug_mode"] == True:
+                                print("[DEBUG] Successfully Located Hash File")
                     except:
                         print("Failed to open hash file. Please check the file location and try again")
                         continue

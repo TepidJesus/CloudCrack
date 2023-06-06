@@ -29,7 +29,8 @@ class Job:
             self.result_file = result_file
 
     def __str__(self):
-        return f"Job ID: {self.job_id} | Hash: {self.hash} | Hash Type: {self.hash_type} | Job Status: {self.job_status}"
+        return f"""Job ID: {self.job_id} | Hash: {self.hash} | Hash Type: {self.hash_type} | Job Status: {self.job_status} 
+        | Attack Mode: {self.attack_mode} | Required Info: {self.required_info} | Result File: {self.result_file}"""
     
     def to_json(self):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
@@ -110,10 +111,10 @@ class JobHandler:
         self.job_id += 1
         return num
     
-    def create_job(self, _hash, hash_type, attack_mode, required_info):
+    def create_job(self, _hash, hash_type, attack_mode, required_info, output_file=None):
+        job = Job(self.get_new_job_id(), _hash, hash_type, STATUS.CREATED, attack_mode, required_info, output_file)
         if self.debug:
-            print(f"[DEBUG] Creating new job with hash {_hash} and hash type {hash_type}.")
-        job = Job(self.get_new_job_id(), _hash, hash_type, STATUS.CREATED, attack_mode, required_info)
+            print(f"[DEBUG] Created Job: {job}")
         return job
     
     def get_job(self, job_id):
@@ -178,10 +179,12 @@ class JobHandler:
         
     def load_from_json(self, json_string):
         json_string = self.from_json(json_string)
-        job = Job(int(json_string["job_id"]), json_string["hash"], json_string["hash_type"], self.convert_status(json_string["job_status"]), json_string["attack_mode"], json_string["required_info"])
+        job = Job(int(json_string["job_id"]), json_string["hash"], json_string["hash_type"], 
+                  self.convert_status(json_string["job_status"]), json_string["attack_mode"], 
+                  json_string["required_info"], json_string["result_file"])
         return job
     
-    def update_result_file(self, job): # NOT WORKING!!!
+    def update_result_file(self, job):
         if self.debug:
             print(f"[DEBUG] Updating result file for job {job.job_id}")
         with open(job.result_file, "w") as f:
