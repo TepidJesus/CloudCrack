@@ -10,7 +10,7 @@
          |       ||   |    |  | |  ||  |_|  || | |   ||       ||   |_||_ |       ||       ||      _|
          |      _||   |___ |  |_|  ||       || |_|   ||      _||    __  ||       ||      _||     |_ 
          |     |_ |       ||       ||       ||       ||     |_ |   |  | ||   _   ||     |_ |    _  |
-         |_______||_______||_______||_______||______| |_______||___|  |_||__| |__||_______||___| |_| v1.1
+         |_______||_______||_______||_______||______| |_______||___|  |_||__| |__||_______||___| |_| v1.2
 
 
 ## Features
@@ -71,6 +71,7 @@ Keep this window open, you will need these credentials when you start CloudCrack
          - set mask <mask_string> ([Syntax Found Here](https://hashcat.net/wiki/doku.php?id=mask_attack))
          - set type <hash_type_code> ([Codes Found Here](https://hashcat.net/wiki/doku.php?id=example_hashes))
          - set hash <hash_string> or set hashes <hash_file_location>
+         - set output <output_file_name.txt> (Optional, will output to CLI if not specified)
          - run  
       
       ![Example Mask Job](images/Example_Mask_Job.png)
@@ -81,6 +82,7 @@ Keep this window open, you will need these credentials when you start CloudCrack
          - set dictionary <dictionary_file_location>
          - set type <hash_type_code> ([Codes Found Here](https://hashcat.net/wiki/doku.php?id=example_hashes))
          - set hash <hash_string> or set hashes <hash_file_location>
+         - set output <output_file_name.txt> (Optional, will output to CLI if not specified)
          - run  
 
       ![Example Dictionary Job](images/Example_Dictionary_Job.png)
