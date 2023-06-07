@@ -90,7 +90,6 @@ class JobHandler:
 
         if self.aws_controller.get_num_instances() < self.aws_controller.get_max_instances():
             self.aws_controller.create_instance()
-            pass
         elif self.debug:
             print("[DEBUG] Max number of instances reached. Job queued.")
         response = self.aws_controller.message_queue(self.outbound_queue, job.to_json(), "Job")
