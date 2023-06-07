@@ -42,8 +42,7 @@ def main():
     try:
         session = boto3.Session(region_name='us-east-2')
         response = requests.get('http://169.254.169.254/latest/meta-data/instance-id')
-        instance_id = response.text
-        
+        instance_id = response.text    
     except:
         ec2_client = session.client('ec2')
         ec2_client.terminate_instances(InstanceIds=[instance_id])

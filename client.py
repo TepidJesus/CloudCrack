@@ -15,9 +15,9 @@ import signal
 class ClientController:
 
     def __init__(self):
-        self.cofig = self.get_config()
-        self.aws_controller = AwsController(self.cofig, "client")
-        self.job_handler = JobHandler(self.aws_controller, "client", self.cofig["General"]["debug_mode"])
+        self.config = self.get_config()
+        self.aws_controller = AwsController(self.config, "client")
+        self.job_handler = JobHandler(self.aws_controller, "client", self.config["General"]["debug_mode"])
         
     def run(self):
         self.print_welcome()
@@ -85,7 +85,7 @@ class ClientController:
             |_______||_______||_______||_______||______| |_______||___|  |_||__| |__||_______||___| |_|
 
             """)
-        print("Welcome to Cloud Crack v1.0")
+        print("Welcome to Cloud Crack v1.1")
         print("Type 'help' for a list of commands")
 
     def print_help(self):
@@ -154,6 +154,7 @@ class ClientController:
                 print("set <option> <value> - set an option to a value")
                 print("run - run the job")
                 print("options - list the current options and their values")
+                print("clear - clear all options")
 
             if input_as_list[0].lower() == "set":
                 if input_as_list[1].lower() == "hash":
@@ -212,13 +213,26 @@ class ClientController:
                         continue
                 elif mask != "":
                     required_info = mask
+
+                if output_file != "":
+                    if self.config["General"]["debug_mode"] == True:
+                        print("[DEBUG] Attempting to Locate Output File: " + output_file)
+                    try:
+                        with open(output_file, "w") as file:
+                            if self.config["General"]["debug_mode"] == True:
+                                print("[DEBUG] Successfully Located Output File")
+                    except:
+                        with open(output_file, "x") as file:
+                            if self.config["General"]["debug_mode"] == True:
+                                print("[DEBUG] Successfully Created Output File")
                 
                 if hash_file_location != "":
                     if self.config["General"]["debug_mode"] == True:
                         print("[DEBUG] Attempting to Get Hash file location: " + hash_file_location)
                     try:
                         with open(hash_file_location, "r") as file:
-                            pass
+                            if self.config["General"]["debug_mode"] == True:
+                                print("[DEBUG] Successfully Located Hash File")
                     except:
                         print("Failed to open hash file. Please check the file location and try again")
                         continue
@@ -229,13 +243,16 @@ class ClientController:
                         _hash = _hash.strip(" ")
                         _hash = _hash.strip("\n")
                         try: 
-                            jb = self.job_handler.create_job(_hash, hash_type, attack_mode, required_info)
+                            jb = self.job_handler.create_job(_hash, hash_type, attack_mode, required_info, output_file)
                             self.job_handler.send_job(jb)
-                        except:
-                            print("Failed to create job") # DEBUG
+                        except Exception as e:
+                            print(f"Failed To Create Job For Hash: {_hash}")
+                            if self.config["General"]["debug_mode"] == True:
+                                print("[DEBUG] Failed To Create Job For Hash: " + _hash)
+                                print(f"[DEBUG] Reason: {e}")
                             continue
                 else:
-                    jb = self.job_handler.create_job(_hash, hash_type, attack_mode, required_info)
+                    jb = self.job_handler.create_job(_hash, hash_type, attack_mode, required_info, output_file)
                     self.job_handler.send_job(jb)
 
             if input_as_list[0] == "clear":
@@ -554,7 +571,7 @@ class AwsController:
         for queue in queues:
             queue.delete()
 
-    def remove_iam_role(self): ## TODO: Delete policies before deleting role
+    def remove_iam_role(self):
         iam = self.session.client('iam')
 
         if self.config["General"]["debug_mode"] == True:
