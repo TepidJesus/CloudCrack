@@ -1,6 +1,7 @@
 from job_handler import JobHandler, STATUS
 import boto3
 from botocore.exceptions import ClientError
+from errors import MaskFormatError
 import json
 import dotenv
 import os
@@ -267,23 +268,23 @@ class ClientController:
         return
     
     def valid_mask(self, mask):
-        if mask == None:
-            return False
+        valid_keyspaces = ["l", "u", "d", "h", "H", "s", "a", "b"]
+        if mask == None or mask == "":
+            raise MaskFormatError("Mask cannot be None or empty")
         
         if "?" not in mask:
-            return False
+            raise MaskFormatError("Mask must contain at least one ? character")
         
         if len(mask) <= 1:
-            return False
+            raise MaskFormatError("Mask must have at least two characters")
         
         for i in range(len(mask)):
             char = mask[i]
-            if char != "?" and char != "d" and char != "l" and char != "u" and char != "s" and char != "a" and char != "h" and char != "H" and char != "b":
-                return False
-            if char == "?" and i % 2 != 0:
-                return False
-            if char != "?" and i % 2 == 0:
-                return False
+            if char == " ":
+                raise MaskFormatError("Mask cannot contain spaces")
+            if char == "?":
+                if char[i + 1] not in valid_keyspaces:
+                    raise MaskFormatError("Invalid keyspace")
         return True
          
     def get_config(self):
