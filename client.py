@@ -1,6 +1,7 @@
 from job_handler import JobHandler, STATUS
 import boto3
 from botocore.exceptions import ClientError
+from errors import MaskFormatError
 import json
 import dotenv
 import os
@@ -174,6 +175,8 @@ class ClientController:
                             attack_mode = int(input_as_list[2].strip())
                 elif input_as_list[1].lower() == "mask":
                     mask = input_as_list[2].strip()
+                    if not self.is_valid_mask(mask):
+                        mask = ""
                 elif input_as_list[1].lower() == "dictionary":
                     dictionary = input_as_list[2].strip()
                 elif input_as_list[1].lower() == "output":
@@ -199,7 +202,7 @@ class ClientController:
                 if attack_mode == "":
                     print("You must provide an attack mode")
                     continue
-                if attack_mode == 3 and not self.valid_mask(mask):
+                if attack_mode == 3 and not self.is_valid_mask(mask): ## TODO: Remove this if unnecessary
                     print("Invalid mask. See the HashCat wiki for help")
                     continue
                 
@@ -266,25 +269,32 @@ class ClientController:
 
         return
     
-    def valid_mask(self, mask):
-        if mask == None:
+    def is_valid_mask(self, mask):
+        valid_keyspaces = ["l", "u", "d", "h", "H", "s", "a", "b"]
+        try:
+            if mask == None or mask == "":
+                raise MaskFormatError("Mask cannot be None or empty")
+            
+            if "?" not in mask:
+                raise MaskFormatError("Mask must contain at least one ? character")
+            
+            if len(mask) <= 1:
+                raise MaskFormatError("Mask must have at least two characters")
+            
+            for i in range(len(mask)):
+                char = mask[i]
+                if char == " ":
+                    raise MaskFormatError("Mask cannot contain spaces")
+                if char == "?":
+                    if i < len(mask) - 1 and mask[i + 1] not in valid_keyspaces:
+                        raise MaskFormatError("Invalid keyspace")
+            return True
+        except MaskFormatError as e:
+            if self.config["General"]["debug_mode"] == True:
+                print("[DEBUG] Mask Format Error: " + str(e))
+            else:
+                print("Invalid Mask: " + str(e))
             return False
-        
-        if "?" not in mask:
-            return False
-        
-        if len(mask) <= 1:
-            return False
-        
-        for i in range(len(mask)):
-            char = mask[i]
-            if char != "?" and char != "d" and char != "l" and char != "u" and char != "s" and char != "a" and char != "h" and char != "H" and char != "b":
-                return False
-            if char == "?" and i % 2 != 0:
-                return False
-            if char != "?" and i % 2 == 0:
-                return False
-        return True
          
     def get_config(self):
         try:
