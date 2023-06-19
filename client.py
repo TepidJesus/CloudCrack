@@ -8,9 +8,9 @@ import time
 import uuid
 import signal
 
-## Problems:
-## TODO: Finish settings menu and add a way to change settings and save them to the config fil
-## TODO: Potentially add a seperate control queue for each Ec2 hashing instance
+## Notes:
+## - This branch is investigating the possiblity of using the AWS Container Service to run the hashcat jobs
+## - This branch is fully experimental and is not intended for production use
 
 class ClientController:
 
