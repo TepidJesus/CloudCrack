@@ -17,23 +17,26 @@ class ClientController:
 
     def __init__(self):
         self.config = self.get_config()
-        self.aws_controller = AwsController(self.config, "client")
-        self.job_handler = JobHandler(self.aws_controller, "client", self.config["General"]["debug_mode"])
+        if not self.config["General"]["offline_mode"]:
+            self.aws_controller = AwsController(self.config, "client")
+            self.job_handler = JobHandler(self.aws_controller, "client", self.config["General"]["debug_mode"])
         
     def run(self):
         self.print_welcome()
         signal.signal(signal.SIGINT, self.handle_interrupt)
         while True:
             user_input = input("\nCloudCrack > ")
-            self.job_handler.check_for_response()
+            if not self.config["General"]["offline_mode"]:
+                self.job_handler.check_for_response()
             user_input.strip()
             input_as_list = user_input.split(" ")
 
             if input_as_list[0] == "help":
                 self.print_help()
             elif input_as_list[0] in ["exit", "close", "quit"]:
-                self.job_handler.cancel_all_jobs()
-                self.aws_controller.cleanup()
+                if not self.config["General"]["offline_mode"]:
+                    self.job_handler.cancel_all_jobs()
+                    self.aws_controller.cleanup()
                 break
             elif input_as_list[0] == "show":
                 if len(input_as_list) < 2:
@@ -64,6 +67,8 @@ class ClientController:
                         self.job_handler.cancel_job(job_id)
                     except:
                         print("Invalid Job ID")
+            elif input_as_list[0] ==  "settings":
+                self.options_screen()
             else:
                 print("Unknown Command -- Type 'help' for a list of commands")
 
@@ -268,6 +273,19 @@ class ClientController:
                 hash_file_location = ""
 
         return
+    
+    def options_screen(self):
+        user_input = ""
+        while user_input != "back" and user_input != "exit":
+            self.show_current_settings()
+            user_input = input("\nCloudCrack > Settings > ")
+            input_as_list = user_input.split(" ")
+
+    def show_current_settings(self):
+        print("\nCurrent Settings:")
+        for section in self.config:
+            for option in self.config[section]:
+                print(f"{option}: {self.config[section][option]}")
     
     def is_valid_mask(self, mask):
         valid_keyspaces = ["l", "u", "d", "h", "H", "s", "a", "b"]
