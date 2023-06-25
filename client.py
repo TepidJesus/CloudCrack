@@ -301,6 +301,7 @@ class ClientController:
                 config[option] = value
             with open("config.json", "w") as file:
                 json.dump(config, file)
+                self.config = config
             return True
         except:
             print("Failed to open config file")
