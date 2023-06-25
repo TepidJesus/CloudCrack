@@ -1,14 +1,9 @@
 {
 
-    "AWS-Settings": {
         "region": "us-east-2",
         "image_id": "ami-08ebf6060be93746b",
-        "usage_limit": 1
-    },
-    
-    "General": {
+        "usage_limit": 1,
         "debug_mode": false,
         "offline_mode": true
-    }
 
 }
