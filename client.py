@@ -282,7 +282,14 @@ class ClientController:
             user_input = input("\nCloudCrack > Settings > ")
             input_as_list = user_input.split(" ")
             if input_as_list[0] == "set":
-                if input_as_list[1] == "region":
+                if input_as_list[1] in self.config:
+                    if self.set_option(input_as_list[1], input_as_list[2]):
+                        print(f"Successfully set {input_as_list[1]} to {input_as_list[2]}")
+                    else:
+                        print(f"Failed to set {input_as_list[1]} to {input_as_list[2]}")
+                else:
+                    print(f"Invalid option {input_as_list[1]}")
+
 
                     
     def set_option(self, option, value):
@@ -291,7 +298,10 @@ class ClientController:
         try:
             with open("config.json", "r") as file:
                 config = json.load(file)
-
+                config[option] = value
+            with open("config.json", "w") as file:
+                json.dump(config, file)
+            return True
         except:
             print("Failed to open config file")
             return False
