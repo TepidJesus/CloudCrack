@@ -390,7 +390,7 @@ class AwsController:
             if self.config["debug_mode"] == True:
                 print("[DEBUG] Testing EC2 Permissions")
             client = boto3.client('ec2', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name='us-east-2')
-            client.run_instances(ImageId=self.config['AWS-Settings']["image_id"], MinCount=1, MaxCount=1, InstanceType='t2.micro', DryRun=True)
+            client.run_instances(ImageId=self.config["image_id"], MinCount=1, MaxCount=1, InstanceType='t2.micro', DryRun=True)
             return True  
         except ClientError as e:
             if self.config["debug_mode"] == True:
