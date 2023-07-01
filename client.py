@@ -352,13 +352,6 @@ class ClientController:
             print("Error: The config file does not exist. Did you delete it? Go get a new one from the repository, it's kind of important.")
             exit()
         return config
-    
-    
-    def vcpu_limit_message(self, limit):
-        print("It looks like your AWS account has a P-Instance vCPU limit of " + str(limit) + ".")
-        print("To use CloudCrack, you need to increase this limit to at least 4. (>= 8 recommended)")
-        print("You can apply for a limit increase here: https://console.aws.amazon.com/servicequotas/home?region=us-east-2#!/services/ec2/quotas/L-417A185B")
-
 
 
 class AwsController:
@@ -379,12 +372,19 @@ class AwsController:
                     exit()
                 
                 self.effective_vCPU_limit = self.get_vCPU_limit() * int(self.config["usage_limit"])
+                if self.effective_vCPU_limit < 4:
+                    self.vcpu_limit_message(self.effective_vCPU_limit)
+                    
                 self.instance_config = self.get_recomended_instance_config()
             elif mode == "server":
                 self.session = self.get_session("server")
 
+    def vcpu_limit_message(self, limit):
+        print("It looks like your AWS account has a P-Instance vCPU limit of " + str(limit) + ".")
+        print("To use CloudCrack, you need to increase this limit to at least 4. (>= 8 recommended)")
+        print("You can apply for a limit increase here: https://console.aws.amazon.com/servicequotas/home?region=us-east-2#!/services/ec2/quotas/L-417A185B")
 
-    
+
     def test_ec2(self, aws_access_key_id, aws_secret_access_key):
         try:
             if self.config["debug_mode"] == True:
