@@ -17,23 +17,26 @@ class ClientController:
 
     def __init__(self):
         self.config = self.get_config()
-        self.aws_controller = AwsController(self.config, "client")
-        self.job_handler = JobHandler(self.aws_controller, "client", self.config["General"]["debug_mode"])
+        if not self.config["offline_mode"]:
+            self.aws_controller = AwsController(self.config, "client")
+            self.job_handler = JobHandler(self.aws_controller, "client", self.config["debug_mode"])
         
     def run(self):
         self.print_welcome()
         signal.signal(signal.SIGINT, self.handle_interrupt)
         while True:
             user_input = input("\nCloudCrack > ")
-            self.job_handler.check_for_response()
+            if not self.config["offline_mode"]:
+                self.job_handler.check_for_response()
             user_input.strip()
             input_as_list = user_input.split(" ")
 
             if input_as_list[0] == "help":
                 self.print_help()
             elif input_as_list[0] in ["exit", "close", "quit"]:
-                self.job_handler.cancel_all_jobs()
-                self.aws_controller.cleanup()
+                if not self.config["offline_mode"]:
+                    self.job_handler.cancel_all_jobs()
+                    self.aws_controller.cleanup()
                 break
             elif input_as_list[0] == "show":
                 if len(input_as_list) < 2:
@@ -64,6 +67,8 @@ class ClientController:
                         self.job_handler.cancel_job(job_id)
                     except:
                         print("Invalid Job ID")
+            elif input_as_list[0] ==  "settings":
+                self.options_screen()
             else:
                 print("Unknown Command -- Type 'help' for a list of commands")
 
@@ -86,7 +91,7 @@ class ClientController:
             |_______||_______||_______||_______||______| |_______||___|  |_||__| |__||_______||___| |_|
 
             """)
-        print("Welcome to Cloud Crack v1.1")
+        print("Welcome to CloudCrack v1.3")
         print("Type 'help' for a list of commands")
 
     def print_help(self):
@@ -218,23 +223,23 @@ class ClientController:
                     required_info = mask
 
                 if output_file != "":
-                    if self.config["General"]["debug_mode"] == True:
+                    if self.config["debug_mode"] == True:
                         print("[DEBUG] Attempting to Locate Output File: " + output_file)
                     try:
                         with open(output_file, "w") as file:
-                            if self.config["General"]["debug_mode"] == True:
+                            if self.config["debug_mode"] == True:
                                 print("[DEBUG] Successfully Located Output File")
                     except:
                         with open(output_file, "x") as file:
-                            if self.config["General"]["debug_mode"] == True:
+                            if self.config["debug_mode"] == True:
                                 print("[DEBUG] Successfully Created Output File")
                 
                 if hash_file_location != "":
-                    if self.config["General"]["debug_mode"] == True:
+                    if self.config["debug_mode"] == True:
                         print("[DEBUG] Attempting to Get Hash file location: " + hash_file_location)
                     try:
                         with open(hash_file_location, "r") as file:
-                            if self.config["General"]["debug_mode"] == True:
+                            if self.config["debug_mode"] == True:
                                 print("[DEBUG] Successfully Located Hash File")
                     except:
                         print("Failed to open hash file. Please check the file location and try again")
@@ -250,7 +255,7 @@ class ClientController:
                             self.job_handler.send_job(jb)
                         except Exception as e:
                             print(f"Failed To Create Job For Hash: {_hash}")
-                            if self.config["General"]["debug_mode"] == True:
+                            if self.config["debug_mode"] == True:
                                 print("[DEBUG] Failed To Create Job For Hash: " + _hash)
                                 print(f"[DEBUG] Reason: {e}")
                             continue
@@ -268,6 +273,49 @@ class ClientController:
                 hash_file_location = ""
 
         return
+    
+    def options_screen(self):
+        user_input = ""
+        
+        while user_input != "back" and user_input != "exit":
+            self.show_current_settings()
+            user_input = input("\nCloudCrack > Settings > ")
+            input_as_list = user_input.split(" ")
+            if input_as_list[0] == "set":
+                if input_as_list[1] in self.config:
+                    if self.set_option(input_as_list[1], input_as_list[2]):
+                        print(f"Successfully set {input_as_list[1]} to {input_as_list[2]}")
+                    else:
+                        print(f"Failed to set {input_as_list[1]} to {input_as_list[2]}")
+                else:
+                    print(f"Invalid option {input_as_list[1]}")
+
+
+                    
+    def set_option(self, option, value):
+        if value == None or value == "":
+            return False
+        try:
+            with open("config.json", "r") as file:
+                config = json.load(file)
+                config[option] = value
+            with open("config.json", "w") as file:
+                json.dump(config, file)
+                self.config = config
+            return True
+        except:
+            print("Failed to open config file")
+            return False
+        
+
+    def show_current_settings(self):
+        print("\nCurrent Settings:")
+        option_categories = []
+        for option in self.config:
+            option_categories.append(option)
+            print(f"{option}: {self.config[option]}")
+
+        return option_categories
     
     def is_valid_mask(self, mask):
         valid_keyspaces = ["l", "u", "d", "h", "H", "s", "a", "b"]
@@ -290,7 +338,7 @@ class ClientController:
                         raise MaskFormatError("Invalid keyspace")
             return True
         except MaskFormatError as e:
-            if self.config["General"]["debug_mode"] == True:
+            if self.config["debug_mode"] == True:
                 print("[DEBUG] Mask Format Error: " + str(e))
             else:
                 print("Invalid Mask: " + str(e))
@@ -304,13 +352,6 @@ class ClientController:
             print("Error: The config file does not exist. Did you delete it? Go get a new one from the repository, it's kind of important.")
             exit()
         return config
-    
-    
-    def vcpu_limit_message(self, limit):
-        print("It looks like your AWS account has a P-Instance vCPU limit of " + str(limit) + ".")
-        print("To use CloudCrack, you need to increase this limit to at least 4. (>= 8 recommended)")
-        print("You can apply for a limit increase here: https://console.aws.amazon.com/servicequotas/home?region=us-east-2#!/services/ec2/quotas/L-417A185B")
-
 
 
 class AwsController:
@@ -330,22 +371,29 @@ class AwsController:
                 if not self.test_sqs() and not self.test_s3():
                     exit()
                 
-                self.effective_vCPU_limit = self.get_vCPU_limit() * int(self.config["AWS-Settings"]["usage_limit"])
+                self.effective_vCPU_limit = self.get_vCPU_limit() * int(self.config["usage_limit"])
+                if self.effective_vCPU_limit < 4:
+                    self.vcpu_limit_message(self.effective_vCPU_limit)
+                    
                 self.instance_config = self.get_recomended_instance_config()
             elif mode == "server":
                 self.session = self.get_session("server")
 
+    def vcpu_limit_message(self, limit):
+        print("It looks like your AWS account has a P-Instance vCPU limit of " + str(limit) + ".")
+        print("To use CloudCrack, you need to increase this limit to at least 4. (>= 8 recommended)")
+        print("You can apply for a limit increase here: https://console.aws.amazon.com/servicequotas/home?region=us-east-2#!/services/ec2/quotas/L-417A185B")
 
-    
+
     def test_ec2(self, aws_access_key_id, aws_secret_access_key):
         try:
-            if self.config["General"]["debug_mode"] == True:
+            if self.config["debug_mode"] == True:
                 print("[DEBUG] Testing EC2 Permissions")
             client = boto3.client('ec2', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name='us-east-2')
-            client.run_instances(ImageId=self.config['AWS-Settings']["image_id"], MinCount=1, MaxCount=1, InstanceType='t2.micro', DryRun=True)
+            client.run_instances(ImageId=self.config["image_id"], MinCount=1, MaxCount=1, InstanceType='t2.micro', DryRun=True)
             return True  
         except ClientError as e:
-            if self.config["General"]["debug_mode"] == True:
+            if self.config["debug_mode"] == True:
                 print(f"[DEBUG] Error: {e.response['Error']['Code']}")
             if e.response['Error']['Code'] == 'AccessDenied':
                 print("Error: EC2 Permission Test FAILED. Please make sure you have the correct permissions enabled for your IAM user.")
@@ -360,12 +408,12 @@ class AwsController:
         
     def test_s3(self):
         try:
-            if self.config["General"]["debug_mode"] == True:
+            if self.config["debug_mode"] == True:
                 print("[DEBUG] Testing S3 Permissions")
             s3 = self.session.client('s3')
             s3.list_buckets(DryRun=True)
         except ClientError as e:
-            if self.config["General"]["debug_mode"] == True:
+            if self.config["debug_mode"] == True:
                 print(f"[DEBUG] Error: {e.response['Error']['Code']}")
             if e.response['Error']['Code'] == 'AccessDenied':
                 print("Error: S3 Permission Test FAILED. Please make sure you have the correct permissions enabled for your IAM user.")
@@ -378,7 +426,7 @@ class AwsController:
     
     def test_sqs(self):
         try:
-            if self.config["General"]["debug_mode"] == True:
+            if self.config["debug_mode"] == True:
                 print("[DEBUG] Testing SQS Permissions")
             sqs = self.session.resource('sqs')
             queue = sqs.create_queue(QueueName="test.fifo", Attributes={'DelaySeconds': '1', 
@@ -387,7 +435,7 @@ class AwsController:
             queue.delete()
             return True
         except ClientError as e:
-            if self.config["General"]["debug_mode"] == True:
+            if self.config["debug_mode"] == True:
                 print(f"[DEBUG] Error: {e.response['Error']['Code']}")
             if e.response['Error']['Code'] == 'AccessDenied':
                 print("Error: SQS Permission Test FAILED. Please make sure you have the correct permissions enabled for your IAM user.")
@@ -398,14 +446,14 @@ class AwsController:
     def get_session(self, mode):
         if mode == "client":
             dotenv.load_dotenv()
-            if self.config["General"]["debug_mode"] == True:
+            if self.config["debug_mode"] == True:
                 print("[DEBUG] Loading AWS Credentials from .env file")
             aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
             aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
             session = boto3.Session(aws_access_key_id=aws_access_key_id, 
                                     aws_secret_access_key=aws_secret_access_key, 
                                     region_name='us-east-2')
-            if self.config["General"]["debug_mode"] == True:
+            if self.config["debug_mode"] == True:
                 print("[DEBUG] Succesfully Established AWS Session")
         else:
             session = boto3.Session(region_name='us-east-2')
@@ -414,7 +462,7 @@ class AwsController:
     def get_vCPU_limit(self):
         quota_client = self.session.client('service-quotas')
         response = quota_client.get_service_quota(ServiceCode='ec2', QuotaCode='L-417A185B')
-        if self.config["General"]["debug_mode"] == True:
+        if self.config["debug_mode"] == True:
             print(f"[DEBUG] vCPU Limit: {response['Quota']['Value']}")
         return int(response['Quota']['Value'])
     
@@ -427,10 +475,10 @@ class AwsController:
             queue = sqs.create_queue(QueueName=queue_name + ".fifo", Attributes={'DelaySeconds': '1', 
                                                             'FifoQueue': 'true', 
                                                             'ContentBasedDeduplication': 'true'})
-            if self.config["General"]["debug_mode"] == True:
+            if self.config["debug_mode"] == True:
                 print(f"[DEBUG] Created Queue: {queue_name}")
         except ClientError as e:
-            if self.config["General"]["debug_mode"] == True:
+            if self.config["debug_mode"] == True:
                 print(f"[DEBUG] Error: {e.response['Error']['Code']}")
             if e.response['Error']['Code'] == 'AWS.SimpleQueueService.QueueDeletedRecently':
                 print("Error: Looks like you restarted CloudCrack to quickly and made AWS mad. Please wait a 60 seconds and try again.")
@@ -449,7 +497,7 @@ class AwsController:
     def message_queue(self, queue, message_body, message_type): ## TODO: FINISH ERROR HANDLING
         try:
             response = queue.send_message(MessageBody=message_body, MessageGroupId=message_type)
-            if self.config["General"]["debug_mode"] == True:
+            if self.config["debug_mode"] == True:
                 print(f"[DEBUG] Sent {message_type} to {queue}")
             return response
         except ClientError as e:
@@ -469,7 +517,7 @@ class AwsController:
             return False
         
     def locate_queue(self, name):
-        if self.config["General"]["debug_mode"] == True:
+        if self.config["debug_mode"] == True:
             print(f"[DEBUG] Locating Queue: {name}")
         sqs = self.session.resource('sqs')
         try:
@@ -484,15 +532,15 @@ class AwsController:
         if self.instance_profile is None:
             self.instance_profile = self.create_instance_profile()
         try:
-            if self.config["General"]["debug_mode"] == True:
+            if self.config["debug_mode"] == True:
                 print(f"[DEBUG] Creating New Instance..")
-            instance = ec2.create_instances(ImageId=self.config["AWS-Settings"]["image_id"], 
+            instance = ec2.create_instances(ImageId=self.config["image_id"], 
                                             MinCount=1, 
                                             MaxCount=1, 
                                             InstanceType=self.instance_config[0], IamInstanceProfile={'Arn': self.instance_profile})
             self.instances.append(instance[0])
         except ClientError as e:
-            if self.config["General"]["debug_mode"] == True:
+            if self.config["debug_mode"] == True:
                 print(f"[DEBUG] Error When Creating Instance: {e.response['Error']['Code']}")
             if e.response['Error']['Code'] == 'InsufficientInstanceCapacity':
                 print("Error: Failed to create instances. Looks like those pesky ML engineers are using all the GPU instances.")
@@ -514,12 +562,12 @@ class AwsController:
         s3 = self.session.client('s3')
         bucket_name = self.create_bucket_name(bucket_prefix)
         try:
-            if self.config["General"]["debug_mode"] == True:
+            if self.config["debug_mode"] == True:
                 print(f"[DEBUG] Creating Bucket: {bucket_name}")
             bucket = s3.create_bucket(Bucket=bucket_name, 
                                       CreateBucketConfiguration={'LocationConstraint': "us-east-2"})
         except ClientError as e:
-            if self.config["General"]["debug_mode"] == True:
+            if self.config["debug_mode"] == True:
                 print(f"[DEBUG] Error When Creating Bucket: {e.response['Error']['Code']}")
             print("Error: Failed to create bucket. Please check your AWS Permissions and try again.") ## TODO: NEED MORE SPECIFIC ERROR HANDLING
             return False ## TODO: Raise exception instead of returning False
@@ -527,11 +575,11 @@ class AwsController:
     
     def upload_file(self, file_path, bucket_name, file_name):
         try:
-            if self.config["General"]["debug_mode"] == True:
+            if self.config["debug_mode"] == True:
                 print(f"[DEBUG] Uploading File: {file_name}")
             self.session.client('s3').upload_file(file_path, bucket_name, file_name)
         except ClientError as e:
-            if self.config["General"]["debug_mode"] == True:
+            if self.config["debug_mode"] == True:
                 print(f"[DEBUG] Error When Uploading File: {e.response['Error']['Code']}")
             else:
                 print("Error: Failed to upload file. Please check your AWS Permissions and try again.")
@@ -540,12 +588,12 @@ class AwsController:
     
     def download_file(self, bucket_name, file_name, local_name):
         try:
-            if self.config["General"]["debug_mode"] == True:
+            if self.config["debug_mode"] == True:
                 print(f"[DEBUG] Downloading File: {file_name}")
             self.session.client('s3').download_file(bucket_name, file_name, local_name)
             return local_name
         except ClientError as e:
-            if self.config["General"]["debug_mode"] == True:
+            if self.config["debug_mode"] == True:
                 print(f"[DEBUG] Error When Downloading File: {e.response['Error']['Code']}")
             else:
                 print("Error: Failed to download file. Please check your AWS credentials and try again.")
@@ -555,7 +603,7 @@ class AwsController:
     
     def close_instances(self):
         ec2 = self.session.resource('ec2')
-        if self.config["General"]["debug_mode"] == True:
+        if self.config["debug_mode"] == True:
             print(f"[DEBUG] Closing All Instances..")
         for instance in self.instances:
             instance.terminate()
@@ -563,7 +611,7 @@ class AwsController:
     def close_buckets(self):
         s3 = self.session.resource('s3')
 
-        if self.config["General"]["debug_mode"] == True:
+        if self.config["debug_mode"] == True:
             print(f"[DEBUG] Closing All Buckets..")
 
         buckets = s3.buckets.all()
@@ -574,7 +622,7 @@ class AwsController:
     def close_queues(self):
         sqs = self.session.resource('sqs')
 
-        if self.config["General"]["debug_mode"] == True:
+        if self.config["debug_mode"] == True:
             print(f"[DEBUG] Closing All Queues..")
             
         queues = sqs.queues.all()
@@ -584,7 +632,7 @@ class AwsController:
     def remove_iam_role(self):
         iam = self.session.client('iam')
 
-        if self.config["General"]["debug_mode"] == True:
+        if self.config["debug_mode"] == True:
             print(f"[DEBUG] Removing IAM Role..")
 
         roles = iam.list_roles()
@@ -596,7 +644,7 @@ class AwsController:
         return False
     
     def remove_instance(self, instance_id):
-        if self.config["General"]["debug_mode"] == True:
+        if self.config["debug_mode"] == True:
             print(f"[DEBUG] Removing Instance From Local List: {instance_id}")
         for instance in self.instances:
             if instance.id == instance_id:
@@ -607,7 +655,7 @@ class AwsController:
     def remove_instance_profile(self):
         iam = self.session.client('iam')
 
-        if self.config["General"]["debug_mode"] == True:
+        if self.config["debug_mode"] == True:
             print(f"[DEBUG] Removing Instance Profile..")
 
         profiles = iam.list_instance_profiles()
@@ -622,7 +670,7 @@ class AwsController:
         return False
 
     def cleanup(self):
-        if self.config["General"]["debug_mode"] == True:
+        if self.config["debug_mode"] == True:
             print(f"[DEBUG] Cleanup Started..")
 
         self.close_instances()
@@ -631,7 +679,7 @@ class AwsController:
         self.remove_instance_profile()
         self.remove_iam_role()
 
-        if self.config["General"]["debug_mode"] == True:
+        if self.config["debug_mode"] == True:
             print(f"[DEBUG] Cleanup Finished")
 
     def get_num_instances(self):
@@ -657,7 +705,7 @@ class AwsController:
     def create_iam_role(self):
         iam = self.session.client('iam')
 
-        if self.config["General"]["debug_mode"] == True:
+        if self.config["debug_mode"] == True:
             print(f"[DEBUG] Creating IAM Role..")
 
         trust_policy = {
@@ -711,7 +759,7 @@ class AwsController:
                 PolicyDocument=str(json.dumps(permissions_policy))
             )
         except ClientError as e:
-            if self.config["General"]["debug_mode"] == True:
+            if self.config["debug_mode"] == True:
                 print(f"[DEBUG] Error When Creating IAM Role {e.response['Error']['Code']}")
 
             if e.response['Error']['Code'] == 'AccessDenied':
@@ -728,7 +776,7 @@ class AwsController:
     def create_instance_profile(self): ## TODO: Ensure this works
         iam = self.session.client('iam')
         try:
-            if self.config["General"]["debug_mode"] == True:
+            if self.config["debug_mode"] == True:
                 print(f"[DEBUG] Creating Instance Profile..")
             response = iam.create_instance_profile(InstanceProfileName='CloudCrack-s3-sqs-instance-profile')
             iam_role_name = self.get_iam_role()['RoleName']
@@ -736,14 +784,14 @@ class AwsController:
             time.sleep(5)
             return response['InstanceProfile']['Arn']
         except ClientError as e:
-            if self.config["General"]["debug_mode"] == True:
+            if self.config["debug_mode"] == True:
                 print(f"[DEBUG] Error When Creating Instance Profile {e.response['Error']['Code']}")
                 raise(e)
            
     def get_iam_role(self):
         iam = self.session.client('iam')
 
-        if self.config["General"]["debug_mode"] == True:
+        if self.config["debug_mode"] == True:
             print(f"[DEBUG] Getting IAM Role..")
 
         roles = iam.list_roles()
@@ -769,7 +817,7 @@ class AwsController:
             if self.dotenv_present():
                 dotenv.load_dotenv()
                 try:
-                    if self.config["General"]["debug_mode"] == True:
+                    if self.config["debug_mode"] == True:
                         print(f"[DEBUG] Fetching AWS Credentials from .env file..")
                     aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
                     aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
@@ -795,7 +843,7 @@ class AwsController:
                 return False
             
         def run_setup(self):
-            if self.config["General"]["debug_mode"] == True:
+            if self.config["debug_mode"] == True:
                 print(f"[DEBUG] Running Setup..")
 
             print("It looks like this is your first time running CloudCrack. Welcome aboard!")
