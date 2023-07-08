@@ -272,7 +272,7 @@ class ClientController:
                 output_file = ""
                 hash_file_location = ""
 
-        return
+        return ## Should probably return something
     
     def options_screen(self):
         user_input = ""
@@ -294,7 +294,7 @@ class ClientController:
                     
     def set_option(self, option, value):
         if value == None or value == "":
-            return False
+            return False #NEWERRORNEEDED
         try:
             with open("config.json", "r") as file:
                 config = json.load(file)
@@ -302,22 +302,22 @@ class ClientController:
             with open("config.json", "w") as file:
                 json.dump(config, file)
                 self.config = config
-            return True
+            return True #NEWERRORNEEDED
         except:
             print("Failed to open config file")
-            return False
+            return False #NEWERRORNEEDED
         
 
-    def show_current_settings(self):
+    def show_current_settings(self): 
         print("\nCurrent Settings:")
         option_categories = []
         for option in self.config:
             option_categories.append(option)
             print(f"{option}: {self.config[option]}")
 
-        return option_categories
+        return option_categories #NEWERRORNEEDED
     
-    def is_valid_mask(self, mask):
+    def is_valid_mask(self, mask): 
         valid_keyspaces = ["l", "u", "d", "h", "H", "s", "a", "b"]
         try:
             if mask == None or mask == "":
@@ -336,13 +336,13 @@ class ClientController:
                 if char == "?":
                     if i < len(mask) - 1 and mask[i + 1] not in valid_keyspaces:
                         raise MaskFormatError("Invalid keyspace")
-            return True
+            return True #NEWERRORNEEDED
         except MaskFormatError as e:
             if self.config["debug_mode"] == True:
                 print("[DEBUG] Mask Format Error: " + str(e))
             else:
                 print("Invalid Mask: " + str(e))
-            return False
+            return False #NEWERRORNEEDED
          
     def get_config(self):
         try:
@@ -354,8 +354,8 @@ class ClientController:
         return config
 
 
-class AwsController:
-    def __init__(self, config, mode):
+class AwsController: 
+    def __init__(self, config, mode): # Should throw an error if the config is invalid
             self.config = config
             if mode == "client":
                 self.credentialManager = self.CredentialManager(self, self.config)
