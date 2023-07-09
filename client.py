@@ -391,19 +391,19 @@ class AwsController:
                 print("[DEBUG] Testing EC2 Permissions")
             client = boto3.client('ec2', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name='us-east-2')
             client.run_instances(ImageId=self.config["image_id"], MinCount=1, MaxCount=1, InstanceType='t2.micro', DryRun=True)
-            return True  
+            return True  # Should return nothing if successful
         except ClientError as e:
             if self.config["debug_mode"] == True:
                 print(f"[DEBUG] Error: {e.response['Error']['Code']}")
             if e.response['Error']['Code'] == 'AccessDenied':
                 print("Error: EC2 Permission Test FAILED. Please make sure you have the correct permissions enabled for your IAM user.")
                 print("You can find the required permissions in the setup guide in the README.md file.")
-                return False
+                return False #NEWERRORNEEDED
             elif 'DryRunOperation' not in str(e):
                 print("Error: Your credentials are invalid. Please make sure you entered them correctly.\n")
-                return False
+                return False #NEWERRORNEEDED
             elif 'DryRunOperation' in str(e):
-                return True
+                return True #NEWERRORNEEDED
 
         
     def test_s3(self):
@@ -418,11 +418,11 @@ class AwsController:
             if e.response['Error']['Code'] == 'AccessDenied':
                 print("Error: S3 Permission Test FAILED. Please make sure you have the correct permissions enabled for your IAM user.")
                 print("You can find the required permissions in the setup guide in the README.md file.")
-                return False
+                return False #NEWERRORNEEDED
             elif 'DryRunOperation' in str(e):
-                    return True
+                    return True # Should return nothing if successful
             else:
-                return False
+                return False #NEWERRORNEEDED
     
     def test_sqs(self):
         try:
@@ -433,17 +433,17 @@ class AwsController:
                                                             'FifoQueue': 'true', 
                                                             'ContentBasedDeduplication': 'true'})
             queue.delete()
-            return True
+            return True # Should return nothing if successful
         except ClientError as e:
             if self.config["debug_mode"] == True:
                 print(f"[DEBUG] Error: {e.response['Error']['Code']}")
             if e.response['Error']['Code'] == 'AccessDenied':
                 print("Error: SQS Permission Test FAILED. Please make sure you have the correct permissions enabled for your IAM user.")
                 print("You can find the required permissions in the setup guide in the README.md file.")
-                return False
-        return False
+                return False #NEWERRORNEEDED
+        return False #NEWERRORNEEDED
         
-    def get_session(self, mode):
+    def get_session(self, mode): # TODO: Should throw custom error if the sessopm cannot be established
         if mode == "client":
             dotenv.load_dotenv()
             if self.config["debug_mode"] == True:
@@ -459,7 +459,7 @@ class AwsController:
             session = boto3.Session(region_name='us-east-2')
         return session
     
-    def get_vCPU_limit(self):
+    def get_vCPU_limit(self): # TODO: Should throw custom error if the limit cannot be found
         quota_client = self.session.client('service-quotas')
         response = quota_client.get_service_quota(ServiceCode='ec2', QuotaCode='L-417A185B')
         if self.config["debug_mode"] == True:
@@ -469,7 +469,7 @@ class AwsController:
     def get_instances(self):
         return self.instances
     
-    def create_queue(self, queue_name):
+    def create_queue(self, queue_name): # TODO: Should throw custom error if the queue cannot be created
         sqs = self.session.resource('sqs')
         try:
             queue = sqs.create_queue(QueueName=queue_name + ".fifo", Attributes={'DelaySeconds': '1', 
@@ -482,12 +482,12 @@ class AwsController:
                 print(f"[DEBUG] Error: {e.response['Error']['Code']}")
             if e.response['Error']['Code'] == 'AWS.SimpleQueueService.QueueDeletedRecently':
                 print("Error: Looks like you restarted CloudCrack to quickly and made AWS mad. Please wait a 60 seconds and try again.")
-                exit()
+                exit() #NEWERRORNEEDED
             elif e.response['Error']['Code'] == 'AWS.SimpleQueueService.QueueNameExists':
                 print(f"Error: Looks like you already have a queue with the name {queue_name}. If you made this queue yourself, please delete or rename it and try again.")
-                exit()
+                exit() #NEWERRORNEEDED
             else:
-                print(e)
+                print(e) # Handle don't show
         except Exception as e:
             print("Error: Failed to create queue. Please check your AWS credentials and try again.")
             self.cleanup()
@@ -509,12 +509,12 @@ class AwsController:
                     else:
                         print(f"Error: Failed to send message to the queue. Retrying... {3 - i} attempts left.")
                         time.sleep(5)
-                        return False
+                        return False #NEWERRORNEEDED
             if message_type == "Job":
                 print(f"Error: Failed to send Job {message_body['job_id']} to the queue.")
             else:
                 print(f"Error: Failed to send {message_type} to the queue.")
-            return False
+            return False #NEWERRORNEEDED
         
     def locate_queue(self, name):
         if self.config["debug_mode"] == True:
@@ -524,7 +524,7 @@ class AwsController:
             queue = sqs.get_queue_by_name(QueueName=name + ".fifo")
         except ClientError as e:
             if e.response['Error']['Code'] == 'AWS.SimpleQueueService.NonExistentQueue':
-                return
+                return #NEWERRORNEEDED
         return queue
     
     def create_instance(self):
@@ -555,7 +555,7 @@ class AwsController:
             else:
                 print(e)
         except Exception as e:
-            print(e)
+            print(e) # Should handle don't show
 
     
     def create_bucket(self, bucket_prefix):
@@ -583,32 +583,33 @@ class AwsController:
                 print(f"[DEBUG] Error When Uploading File: {e.response['Error']['Code']}")
             else:
                 print("Error: Failed to upload file. Please check your AWS Permissions and try again.")
-            return False
-        return True
+            return False # Raise exception instead of returning False
+        return True # Remove
     
     def download_file(self, bucket_name, file_name, local_name):
         try:
             if self.config["debug_mode"] == True:
                 print(f"[DEBUG] Downloading File: {file_name}")
             self.session.client('s3').download_file(bucket_name, file_name, local_name)
-            return local_name
+            return local_name 
         except ClientError as e:
             if self.config["debug_mode"] == True:
                 print(f"[DEBUG] Error When Downloading File: {e.response['Error']['Code']}")
             else:
                 print("Error: Failed to download file. Please check your AWS credentials and try again.")
+            return False # Raise exception instead of returning False
     
     def create_bucket_name(self, bucket_prefix):
-        return ''.join([bucket_prefix, str(uuid.uuid4())])
+        return ''.join([bucket_prefix, str(uuid.uuid4())]) # Should handle exception if one occurs
     
-    def close_instances(self):
+    def close_instances(self): # Needs error handling
         ec2 = self.session.resource('ec2')
         if self.config["debug_mode"] == True:
             print(f"[DEBUG] Closing All Instances..")
         for instance in self.instances:
             instance.terminate()
 
-    def close_buckets(self):
+    def close_buckets(self):  # Needs error handling
         s3 = self.session.resource('s3')
 
         if self.config["debug_mode"] == True:
@@ -619,7 +620,7 @@ class AwsController:
             bucket.objects.all().delete()
             bucket.delete()
     
-    def close_queues(self):
+    def close_queues(self):  # Needs error handling
         sqs = self.session.resource('sqs')
 
         if self.config["debug_mode"] == True:
@@ -629,7 +630,7 @@ class AwsController:
         for queue in queues:
             queue.delete()
 
-    def remove_iam_role(self):
+    def remove_iam_role(self):  # Needs error handling
         iam = self.session.client('iam')
 
         if self.config["debug_mode"] == True:
@@ -643,7 +644,7 @@ class AwsController:
                 return True
         return False
     
-    def remove_instance(self, instance_id):
+    def remove_instance(self, instance_id):  # Needs error handling
         if self.config["debug_mode"] == True:
             print(f"[DEBUG] Removing Instance From Local List: {instance_id}")
         for instance in self.instances:
@@ -652,7 +653,7 @@ class AwsController:
                 print("Idle Instance Terminated")
                 break
             
-    def remove_instance_profile(self):
+    def remove_instance_profile(self):  # Needs error handling
         iam = self.session.client('iam')
 
         if self.config["debug_mode"] == True:
@@ -666,10 +667,10 @@ class AwsController:
                 except:
                     pass
                 iam.delete_instance_profile(InstanceProfileName='CloudCrack-s3-sqs-instance-profile')
-                return True
-        return False
+                return True # Remove
+        return False # Raise exception instead of returning False
 
-    def cleanup(self):
+    def cleanup(self):  # Handle errors from all cleanup functions
         if self.config["debug_mode"] == True:
             print(f"[DEBUG] Cleanup Started..")
 
@@ -686,9 +687,9 @@ class AwsController:
         return len(self.instances)
 
     def get_max_instances(self):
-        return self.instance_config[1]
+        return self.instance_config[1]  # Needs error handling
 
-    def get_recomended_instance_config(self): 
+    def get_recomended_instance_config(self):  # Needs error handling
         if self.effective_vCPU_limit // 96 >=  1:
             return ("p4d.24xlarge", self.effective_vCPU_limit // 96)
         elif self.effective_vCPU_limit // 64 >= 1:
@@ -765,15 +766,15 @@ class AwsController:
             if e.response['Error']['Code'] == 'AccessDenied':
                 print("Error: IAM Permission Test FAILED. Please make sure you have the correct permissions enabled for your IAM user.")
                 print("You can find the required permissions in the setup guide in the README.md file.")
-                return False
+                return False # Raise exception instead of returning False
             elif e.response['Error']['Code'] == 'EntityAlreadyExists':
                 pass
             else:
-                return False
+                return False # Raise exception instead of returning False
 
         return response['Role']
     
-    def create_instance_profile(self): ## TODO: Ensure this works
+    def create_instance_profile(self):
         iam = self.session.client('iam')
         try:
             if self.config["debug_mode"] == True:
@@ -788,7 +789,7 @@ class AwsController:
                 print(f"[DEBUG] Error When Creating Instance Profile {e.response['Error']['Code']}")
                 raise(e)
            
-    def get_iam_role(self):
+    def get_iam_role(self):  # Needs error handling
         iam = self.session.client('iam')
 
         if self.config["debug_mode"] == True:
@@ -808,12 +809,12 @@ class AwsController:
             self.aws_controller = aws_controller
             self.aws_access_key_id, self.aws_secret_access_key = self.get_credentials()
 
-        def set_credentials(self, aws_access_key_id, aws_secret_access_key):
+        def set_credentials(self, aws_access_key_id, aws_secret_access_key):  # Needs error handling
             with open(".env", "w") as f:
                 f.write("AWS_ACCESS_KEY_ID=" + aws_access_key_id)
                 f.write("\nAWS_SECRET_ACCESS_KEY=" + aws_secret_access_key)
         
-        def get_credentials(self):
+        def get_credentials(self):  # Needs error handling
             if self.dotenv_present():
                 dotenv.load_dotenv()
                 try:
