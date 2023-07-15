@@ -1,4 +1,5 @@
 from botocore.exceptions import ClientError
+from errors import CredentialsFileNotFoundError, EnvironmentVariableNotFoundError
 import boto3
 import dotenv
 import os
@@ -461,7 +462,10 @@ class AwsController:
         def __init__(self, aws_controller, config):
             self.config = config
             self.aws_controller = aws_controller
-            self.aws_access_key_id, self.aws_secret_access_key = self.get_credentials()
+            try:
+                self.aws_access_key_id, self.aws_secret_access_key = self.get_credentials()
+            except CredentialsFileNotFoundError or EnvironmentVariableNotFoundError:
+                self.aws_access_key_id, self.aws_secret_access_key = self.run_setup()
 
         def set_credentials(self, aws_access_key_id, aws_secret_access_key):  # Needs error handling
             with open(".env", "w") as f:
@@ -469,19 +473,19 @@ class AwsController:
                 f.write("\nAWS_SECRET_ACCESS_KEY=" + aws_secret_access_key)
         
         def get_credentials(self):  # Needs error handling
-            if self.dotenv_present():
-                dotenv.load_dotenv()
-                try:
-                    if self.config["debug_mode"] == True:
-                        print(f"[DEBUG] Fetching AWS Credentials from .env file..")
-                    aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
-                    aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-                    return aws_access_key_id, aws_secret_access_key
-                except:
-                    raise Exception("Error: Failed to load AWS credentials from .env file. Please check the file and try again.")
+            if dotenv.load_dotenv():
+                if self.config["debug_mode"] == True:
+                    print(f"[DEBUG] Fetching AWS Credentials from .env file..")
+                aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+                aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+
+                if aws_access_key_id == None or aws_secret_access_key == None:
+                    raise EnvironmentVariableNotFoundError("AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY not found in .env file.\nPlease delete the .env file and run CC again.")
+                
+                return aws_access_key_id, aws_secret_access_key
+                 
             else:
-                self.run_setup()
-                return self.get_credentials()
+                raise CredentialsFileNotFoundError("Dotenv file not found.")
 
         def get_aws_access_key_id(self):
             return self.aws_access_key_id
@@ -489,13 +493,6 @@ class AwsController:
         def get_aws_secret_access_key(self):
             return self.aws_secret_access_key
 
-        def dotenv_present(self):
-            try:
-                with open(".env", "r") as f:
-                    dotenv = f.read()
-                return True
-            except:
-                return False
             
         def run_setup(self):
             if self.config["debug_mode"] == True:
