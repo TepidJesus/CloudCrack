@@ -32,7 +32,7 @@ class Job:
         return f"""Job ID: {self.job_id} | Hash: {self.hash} | Hash Type: {self.hash_type} | Job Status: {self.job_status} 
         | Attack Mode: {self.attack_mode} | Required Info: {self.required_info} | Result File: {self.result_file}"""
     
-    def to_json(self):
+    def to_json(self): 
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
     
 class JobHandler:

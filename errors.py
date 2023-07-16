@@ -9,11 +9,15 @@ class MalformedJobError(Exception):
 
 class ConfigError(Exception):
     def __init__(self, message) -> None:
-        super().__init__("The configuration file is missing or malformed. Pleas get a new one from the repository.")
+        super().__init__("The configuration file is missing or malformed. Please get a new one from the repository.")
 
 class CredentialsFileNotFoundError(Exception):
     def __init__(self, message) -> None:
-        super().__init__("No credentials file found.")
+        super().__init__(message)
+
+class EnvironmentVariableNotFoundError(Exception):
+    def __init__(self, message) -> None:
+        super().__init__(message)
 
 ## AWS Errors ##         
 
