@@ -1,5 +1,5 @@
 from botocore.exceptions import ClientError
-from errors import CredentialsFileNotFoundError, EnvironmentVariableNotFoundError
+from errors import CredentialsFileNotFoundError, EnvironmentVariableNotFoundError, AWSPermissionsError, AWSCredentialError
 import boto3
 import dotenv
 import os
@@ -50,15 +50,15 @@ class AwsController:
         except ClientError as e:
             if self.config["debug_mode"] == True:
                 print(f"[DEBUG] Error: {e.response['Error']['Code']}")
+
             if e.response['Error']['Code'] == 'AccessDenied':
                 print("Error: EC2 Permission Test FAILED. Please make sure you have the correct permissions enabled for your IAM user.")
                 print("You can find the required permissions in the setup guide in the README.md file.")
-                return False #NEWERRORNEEDED
+                raise AWSPermissionsError("EC2 Permission Test FAILED. Please make sure you have the correct permissions enabled for your IAM user.")
             elif 'DryRunOperation' not in str(e):
                 print("Error: Your credentials are invalid. Please make sure you entered them correctly.\n")
-                return False #NEWERRORNEEDED
-            elif 'DryRunOperation' in str(e):
-                return True #NEWERRORNEEDED
+                raise AWSCredentialError("Invlaid Credentials")
+            return
 
         
     def test_s3(self):
@@ -466,6 +466,8 @@ class AwsController:
                 self.aws_access_key_id, self.aws_secret_access_key = self.get_credentials()
             except CredentialsFileNotFoundError or EnvironmentVariableNotFoundError:
                 self.aws_access_key_id, self.aws_secret_access_key = self.run_setup()
+            except Exception as e:
+                raise(e)
 
         def set_credentials(self, aws_access_key_id, aws_secret_access_key):  # Needs error handling
             with open(".env", "w") as f:
@@ -493,7 +495,6 @@ class AwsController:
         def get_aws_secret_access_key(self):
             return self.aws_secret_access_key
 
-            
         def run_setup(self):
             if self.config["debug_mode"] == True:
                 print(f"[DEBUG] Running Setup..")
@@ -505,12 +506,13 @@ class AwsController:
                 aws_access_key_id = input("Enter your AWS Access Key ID: ")
                 aws_secret_access_key = input("Enter your AWS Secret Access Key: ")
                 print("Please wait while I validate your credentials...")
-                if self.aws_controller.test_ec2(aws_access_key_id, aws_secret_access_key):
+                try:
+                    self.aws_controller.test_ec2(aws_access_key_id, aws_secret_access_key)
                     print("Success! Your credentials have been validated.")
                     print("You're all set! Have fun, but remember to be safe and to only use this tool for legitimate purposes.")
                     self.set_credentials(aws_access_key_id, aws_secret_access_key)
                     return aws_access_key_id, aws_secret_access_key
-                else:
+                except:
                     print("Error: Failed to validate credentials. Please try again.")
                     print("If you are sure your credentials are correct, please check your internet connection and try again.")
                     print("If you are still having issues, please open an issue on GitHub.")
